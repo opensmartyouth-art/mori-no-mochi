@@ -114,12 +114,19 @@ function icoHome(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
   ctx.stroke()
 }
 
+export interface ResultOpts {
+  /** 공유 이미지에는 버튼을 넣지 않는다. 받는 사람이 누를 수 없다. */
+  buttons?: boolean
+}
+
 /** 결과 카드(GDD §10). t 는 'over' 가 된 뒤 흐른 시간(초). */
 export function drawResult(
   ctx: CanvasRenderingContext2D,
   w: World,
   t: number,
+  opts: ResultOpts = {},
 ): void {
+  const withButtons = opts.buttons !== false
   const k = easeOutCubic(clamp01(t / 0.42))
   const best = getBest()
   const s = w.score
@@ -179,7 +186,7 @@ export function drawResult(
   ctx.fillStyle = COL_MUTED
   ctx.fillText(`최고 점수 ${best.score}`, CARD_X + CARD_W - 24, CARD_Y + 272)
 
-  for (const b of cardButtons()) {
+  for (const b of withButtons ? cardButtons() : []) {
     ctx.fillStyle = COL_CARD
     ctx.beginPath()
     ctx.arc(b.cx, b.cy, b.r, 0, Math.PI * 2)
