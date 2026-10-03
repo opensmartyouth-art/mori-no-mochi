@@ -14,7 +14,7 @@ export function drawDebug(
   ctx.font = `500 11px ${FONT_STACK}`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  const line = `${stats.fps.toFixed(1)} fps · ${stats.frameMs.toFixed(1)} ms · x${stats.steps}${extra ? ' · ' + extra : ''}`
+  const line = `${stats.fps.toFixed(1)} fps · ${stats.frameMs.toFixed(1)} ms · 렌더 ${stats.renderMs.toFixed(2)} ms · x${stats.steps}${extra ? ' · ' + extra : ''}`
   const w = ctx.measureText(line).width + 12
   ctx.fillStyle = 'rgba(0,0,0,0.35)'
   ctx.fillRect(8, 8, w, 20)

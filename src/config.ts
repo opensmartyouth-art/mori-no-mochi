@@ -125,14 +125,35 @@ export const RING_MAX_SCALE = 1.9
 export const LABEL_TIME = 0.9
 
 // ── 색 ────────────────────────────────────────────────────────────
+// 원작의 강점은 절제다. 색 수를 늘리지 말고 한 계열 안에서 명도만 움직인다.
 export const COL_BG = '#6f7a54'
-export const COL_STUMP_TOP = '#d8c398'
+/** 바닥 얼룩. 배경과의 대비를 아주 낮게 유지한다. */
+export const COL_BG_DARK = '#67724c'
+export const COL_BG_LIGHT = '#78835d'
+export const COL_GRASS = '#828d61'
+
+export const COL_STUMP_TOP = '#d7c399'
+/** 윗면 가운데 하이라이트. 빛은 좌상단에서 온다. */
+export const COL_STUMP_TOP_LIT = '#e4d3ae'
+export const COL_STUMP_RING = 'rgba(146, 112, 73, 0.26)'
+export const COL_STUMP_RIM = 'rgba(112, 84, 55, 0.4)'
 export const COL_STUMP_SIDE = '#5d4330'
-export const COL_MOCHI = '#fbfaf6'
+export const COL_STUMP_SIDE_LIT = '#6d5039'
+export const COL_STUMP_SIDE_DARK = '#473225'
+
+export const COL_MOCHI = '#fcfbf7'
+export const COL_MOCHI_SHADE = '#e4dfd1'
+export const COL_EYE = '#3a3f2c'
+
 export const COL_INK = '#2f3524'
 export const COL_TEXT = '#ffffff'
 export const COL_GOLD = '#e8c07a'
 export const COL_SHADOW = 'rgba(32, 38, 22, 0.26)'
+
+/** 바닥 디테일 타일 한 변(px). 반복이 눈에 띄지 않게 대비를 낮게 둔다. */
+export const GROUND_TILE = 512
+/** 화면 가장자리 비네트 세기. */
+export const VIGNETTE = 0.16
 
 export const FONT_STACK =
   '-apple-system, "SF Pro Rounded", "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif'

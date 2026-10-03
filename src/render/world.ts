@@ -1,9 +1,10 @@
-import { COL_MOCHI, MOCHI_RX, MOCHI_RY, RING_MAX_SCALE, RING_TIME, TILE } from '../config'
-import { clamp01, easeOutCubic, easeOutQuart, mix } from '../engine/ease'
+import { MOCHI_RX, MOCHI_RY, RING_MAX_SCALE, RING_TIME, TILE } from '../config'
+import { clamp, clamp01, easeOutCubic, easeOutQuart, mix } from '../engine/ease'
 import { depth, isoEllipse, project } from '../game/iso'
 import type { Ring, World } from '../game/world'
 import { current } from '../game/world'
-import { drawBlobShadow, drawStump, drawStumpShadow } from './scene'
+import { drawMochi as paintMochi, stumpShadowGeom } from './scene'
+import { blitShadow, blitStump, stumpSprite, STUMP_VARIANTS } from './sprites'
 
 const TAU = Math.PI * 2
 
@@ -29,12 +30,18 @@ function drawMochi(ctx: CanvasRenderingContext2D, w: World): void {
   const rx = MOCHI_RX * m.sx
   const ry = MOCHI_RY * m.sy
 
+  // 점프 직전 다음 그루터기 쪽을 본다(GDD §4).
+  const tgt = w.stumps[w.curIdx + 1]
+  const look = tgt
+    ? clamp((project(tgt.wx, tgt.wy, tgt.h).x - p.x) / 40, -1, 1)
+    : 0
+
   // 발밑 그림자. 공중에서는 지면으로 떨어뜨리고 높이만큼 옅고 작게.
   const standZ = w.phase === 'flying' || w.phase === 'falling' ? 0 : m.wz
   const lift = Math.max(0, m.wz - standZ)
   const ground = project(m.wx, m.wy, standZ)
   const k = clamp01(1 - lift / 2.2)
-  drawBlobShadow(
+  blitShadow(
     ctx,
     ground.x + 4,
     ground.y + 2,
@@ -43,10 +50,7 @@ function drawMochi(ctx: CanvasRenderingContext2D, w: World): void {
     0.3 * mix(0.35, 1, k),
   )
 
-  ctx.fillStyle = COL_MOCHI
-  ctx.beginPath()
-  ctx.ellipse(p.x, p.y - ry, rx, ry, 0, 0, TAU)
-  ctx.fill()
+  paintMochi(ctx, { x: p.x, y: p.y, rx, ry, look })
 }
 
 type Item =
@@ -76,8 +80,15 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
   for (const it of items) {
     if (it.kind === 'stump') {
       const s = w.stumps[it.i]!
-      drawStumpShadow(ctx, s)
-      drawStump(ctx, s)
+      const top = project(s.wx, s.wy, s.h)
+      const g = stumpShadowGeom(s.r, s.h)
+      blitShadow(ctx, top.x + g.dx, top.y + g.dy, g.rx, g.ry, 0.28)
+      blitStump(
+        ctx,
+        stumpSprite(s.r, s.h, ((s.index % STUMP_VARIANTS) + STUMP_VARIANTS) % STUMP_VARIANTS),
+        top.x,
+        top.y,
+      )
     } else {
       drawMochi(ctx, w)
     }

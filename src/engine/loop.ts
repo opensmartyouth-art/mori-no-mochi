@@ -7,6 +7,8 @@ export interface LoopStats {
   frameMs: number
   /** 이번 프레임에 돌린 고정 스텝 수. */
   steps: number
+  /** 직전 프레임의 render() 소요(ms). vsync 간격과 구분해서 본다. */
+  renderMs: number
 }
 
 /**
@@ -22,7 +24,7 @@ export function startLoop(
   let raf = 0
   let running = true
 
-  const stats: LoopStats = { fps: 0, frameMs: 0, steps: 0 }
+  const stats: LoopStats = { fps: 0, frameMs: 0, steps: 0, renderMs: 0 }
   let frames = 0
   let fpsClock = prev
 
@@ -50,7 +52,9 @@ export function startLoop(
       fpsClock = now
     }
 
+    const t0 = performance.now()
     render(acc / FIXED_DT, stats)
+    stats.renderMs = stats.renderMs * 0.9 + (performance.now() - t0) * 0.1
   }
 
   raf = requestAnimationFrame(tick)

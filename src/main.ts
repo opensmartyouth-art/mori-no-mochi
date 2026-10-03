@@ -1,7 +1,8 @@
 import { createStage } from './engine/canvas'
 import { startLoop } from './engine/loop'
 import { DEBUG, drawDebug } from './render/debug'
-import { clearWorld } from './render/scene'
+import { drawGround, drawVignette } from './render/ground'
+import { setSpriteScale } from './render/sprites'
 import { drawDebugWorld, drawWorld } from './render/world'
 import { drawHud } from './render/hud'
 import { drawResult, hitButton } from './render/result'
@@ -66,9 +67,11 @@ startLoop(
   },
   (_alpha, stats) => {
     stage.begin()
+    setSpriteScale(stage.scale)
     const { ctx } = stage
-    clearWorld(ctx)
+    drawGround(ctx, world.camera.px, world.camera.py)
     drawWorld(ctx, world)
+    drawVignette(ctx)
     if (DEBUG) drawDebugWorld(ctx, world)
     if (world.phase === 'over') drawResult(ctx, world, world.overT)
     else drawHud(ctx, world)
