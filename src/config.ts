@@ -123,6 +123,15 @@ export const CAM_ANCHOR_Y = 0.6
 export const RING_TIME = 0.55
 export const RING_MAX_SCALE = 1.9
 export const LABEL_TIME = 0.9
+/** 착지 먼지. 그루터기 윗면에서 바깥으로 퍼진다. */
+export const DUST_COUNT = 7
+export const DUST_TIME = 0.5
+export const DUST_SPREAD = 0.55
+/** 화면 흔들림. 과하면 싸구려가 된다 — px 단위로 한 자리수만. */
+export const SHAKE_TIME = 0.22
+export const SHAKE_OK = 1.5
+export const SHAKE_PERFECT = 2.6
+export const SHAKE_MISS = 3.6
 
 // ── 색 ────────────────────────────────────────────────────────────
 // 원작의 강점은 절제다. 색 수를 늘리지 말고 한 계열 안에서 명도만 움직인다.
@@ -148,7 +157,6 @@ export const COL_EYE = '#3a3f2c'
 export const COL_INK = '#2f3524'
 export const COL_TEXT = '#ffffff'
 export const COL_GOLD = '#e8c07a'
-export const COL_SHADOW = 'rgba(32, 38, 22, 0.26)'
 
 /** 바닥 디테일 타일 한 변(px). 반복이 눈에 띄지 않게 대비를 낮게 둔다. */
 export const GROUND_TILE = 512

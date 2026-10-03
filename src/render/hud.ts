@@ -14,13 +14,11 @@ import type { World } from '../game/world'
  * 큰 숫자는 점수가 아니라 **그루터기 개수**다. 그 아래 Perfect ×N.
  * 차지 게이지는 그리지 않는다 — 스쿼시가 게이지다.
  */
-export function drawHud(ctx: CanvasRenderingContext2D, w: World): void {
+/** 좌상단 기록. 타이틀에서도 그대로 보인다(원작처럼). */
+export function drawRecords(ctx: CanvasRenderingContext2D): void {
   const best = getBest()
-
   ctx.save()
   ctx.textBaseline = 'alphabetic'
-
-  // 좌상단 기록
   ctx.textAlign = 'left'
   ctx.font = `600 11px ${FONT_STACK}`
   ctx.fillStyle = 'rgba(255,255,255,0.72)'
@@ -31,6 +29,14 @@ export function drawHud(ctx: CanvasRenderingContext2D, w: World): void {
   ctx.font = `600 10px ${FONT_STACK}`
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
   ctx.fillText(`퍼펙트 ${best.combo}연속`, 20, 57)
+  ctx.restore()
+}
+
+export function drawHud(ctx: CanvasRenderingContext2D, w: World): void {
+  drawRecords(ctx)
+
+  ctx.save()
+  ctx.textBaseline = 'alphabetic'
 
   // 중앙 상단 그루터기 개수
   ctx.textAlign = 'center'

@@ -4,6 +4,9 @@ import {
   CHARGE_TIME,
   CULL_MARGIN,
   DESIGN_H,
+  DUST_COUNT,
+  DUST_SPREAD,
+  DUST_TIME,
   CHARGE_WOBBLE_AMP,
   CHARGE_WOBBLE_HZ,
   FALL_GRAVITY,
@@ -19,6 +22,10 @@ import {
   MAX_DIST,
   MIN_DIST,
   RING_TIME,
+  SHAKE_MISS,
+  SHAKE_OK,
+  SHAKE_PERFECT,
+  SHAKE_TIME,
   SQUASH_MAX,
   STUMP_HEIGHTS,
   STUMP_RADII,
@@ -41,6 +48,17 @@ export interface Ring {
   wz: number
   /** 시작 반지름(월드 unit). */
   r: number
+  t: number
+}
+
+export interface Dust {
+  wx: number
+  wy: number
+  wz: number
+  /** 평면상 퍼지는 방향. */
+  dx: number
+  dy: number
+  reach: number
   t: number
 }
 
@@ -74,6 +92,8 @@ export interface World {
   clock: number
   /** 낙하 중 속도(unit/s). 실패했을 때만 쓴다. */
   fall: { vx: number; vy: number; vz: number }
+  dust: Dust[]
+  shake: { t: number; mag: number }
 }
 
 export function createWorld(seed = (Math.random() * 1e9) | 0): World {
@@ -108,6 +128,8 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     overT: 0,
     clock: 0,
     fall: { vx: 0, vy: 0, vz: 0 },
+    dust: [],
+    shake: { t: SHAKE_TIME, mag: 0 },
   }
 }
 
@@ -155,6 +177,8 @@ function land(w: World): void {
     w.mochi.wy = pos.wy
     w.mochi.wz = tgt.h
     w.fall = { vx: p.dirX * vh, vy: p.dirY * vh, vz: 0 }
+    kick(w, SHAKE_MISS)
+    puff(w, pos.wx, pos.wy, tgt.h, 0.8)
     w.phase = 'falling'
     w.overT = 0
     return
@@ -168,11 +192,15 @@ function land(w: World): void {
   w.landT = 0
   w.phase = 'idle'
 
+  puff(w, pos.wx, pos.wy, tgt.h, res.verdict === 'perfect' ? 1.15 : 0.85)
+
   if (res.verdict === 'perfect') {
     w.rings.push({ wx: tgt.wx, wy: tgt.wy, wz: tgt.h, r: tgt.r * 0.55, t: 0 })
     w.label = { combo: w.score.combo, t: 0 }
+    kick(w, SHAKE_PERFECT)
   } else {
     w.label = null
+    kick(w, SHAKE_OK)
   }
 
   // 앞쪽으로 항상 LOOKAHEAD 개가 보이도록 채운다. 직전 그루터기 중심 기준.
@@ -232,7 +260,43 @@ function updateVisual(w: World, dt: number): void {
   m.sx = 1 + (1 - landSy) * 0.6
 }
 
+function puff(w: World, x: number, y: number, z: number, strength: number): void {
+  for (let i = 0; i < DUST_COUNT; i++) {
+    const a = w.rng.next() * Math.PI * 2
+    w.dust.push({
+      wx: x,
+      wy: y,
+      wz: z,
+      dx: Math.cos(a),
+      dy: Math.sin(a),
+      reach: DUST_SPREAD * strength * w.rng.range(0.6, 1.3),
+      t: 0,
+    })
+  }
+}
+
+const kick = (w: World, mag: number): void => {
+  w.shake = { t: 0, mag }
+}
+
+/** 화면 흔들림 오프셋(px). 착지 직후에만 아주 짧게. */
+export function shakeOffset(w: World): { x: number; y: number } {
+  const { t, mag } = w.shake
+  if (t >= SHAKE_TIME || mag <= 0) return { x: 0, y: 0 }
+  const k = 1 - easeOutCubic(t / SHAKE_TIME)
+  return {
+    x: Math.sin(t * 74) * mag * k,
+    y: Math.cos(t * 96) * mag * k * 0.7,
+  }
+}
+
 function updateEffects(w: World, dt: number): void {
+  w.shake.t += dt
+  for (let i = w.dust.length - 1; i >= 0; i--) {
+    const d = w.dust[i]!
+    d.t += dt
+    if (d.t >= DUST_TIME) w.dust.splice(i, 1)
+  }
   for (let i = w.rings.length - 1; i >= 0; i--) {
     const r = w.rings[i]!
     r.t += dt

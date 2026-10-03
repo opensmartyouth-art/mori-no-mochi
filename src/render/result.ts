@@ -23,17 +23,22 @@ const COL_LINE = 'rgba(47, 53, 36, 0.1)'
 const BTN_R = 25
 const BTN_Y = CARD_Y + CARD_H + 52
 
+export type ButtonId = 'share' | 'retry' | 'home'
+
 export interface CardButton {
-  id: 'retry'
+  id: ButtonId
   cx: number
   cy: number
   r: number
   label: string
 }
 
-/** 공유·처음으로는 각각 공유 이미지와 타이틀 화면이 생긴 뒤(8단계) 붙인다. */
+const GAP = 84
+
 export const cardButtons = (): CardButton[] => [
-  { id: 'retry', cx: DESIGN_W / 2, cy: BTN_Y, r: BTN_R, label: '다시 하기' },
+  { id: 'share', cx: DESIGN_W / 2 - GAP, cy: BTN_Y, r: BTN_R, label: '공유' },
+  { id: 'retry', cx: DESIGN_W / 2, cy: BTN_Y, r: BTN_R + 4, label: '다시 하기' },
+  { id: 'home', cx: DESIGN_W / 2 + GAP, cy: BTN_Y, r: BTN_R, label: '처음으로' },
 ]
 
 export function hitButton(x: number, y: number): CardButton | null {
@@ -70,6 +75,43 @@ function mochiFace(ctx: CanvasRenderingContext2D, cx: number, cy: number): void 
   ctx.ellipse(cx - 9, cy - 2, 2.6, 3.4, 0, 0, Math.PI * 2)
   ctx.ellipse(cx + 9, cy - 2, 2.6, 3.4, 0, 0, Math.PI * 2)
   ctx.fill()
+}
+
+function icoRetry(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  ctx.beginPath()
+  ctx.arc(cx, cy, 9, Math.PI * 0.35, Math.PI * 1.75)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(cx + 2.5, cy - 11.5)
+  ctx.lineTo(cx + 7.5, cy - 7.5)
+  ctx.lineTo(cx + 1.5, cy - 4)
+  ctx.stroke()
+}
+
+function icoShare(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  ctx.beginPath()
+  ctx.moveTo(cx, cy - 9)
+  ctx.lineTo(cx, cy + 3)
+  ctx.moveTo(cx - 4, cy - 5)
+  ctx.lineTo(cx, cy - 9.5)
+  ctx.lineTo(cx + 4, cy - 5)
+  ctx.moveTo(cx - 7, cy - 1)
+  ctx.lineTo(cx - 7, cy + 8)
+  ctx.lineTo(cx + 7, cy + 8)
+  ctx.lineTo(cx + 7, cy - 1)
+  ctx.stroke()
+}
+
+function icoHome(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  ctx.beginPath()
+  ctx.moveTo(cx - 8, cy - 0.5)
+  ctx.lineTo(cx, cy - 8)
+  ctx.lineTo(cx + 8, cy - 0.5)
+  ctx.moveTo(cx - 5.5, cy - 2)
+  ctx.lineTo(cx - 5.5, cy + 7.5)
+  ctx.lineTo(cx + 5.5, cy + 7.5)
+  ctx.lineTo(cx + 5.5, cy - 2)
+  ctx.stroke()
 }
 
 /** 결과 카드(GDD §10). t 는 'over' 가 된 뒤 흐른 시간(초). */
@@ -143,21 +185,16 @@ export function drawResult(
     ctx.arc(b.cx, b.cy, b.r, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = COL_INK
-    ctx.lineWidth = 2.2
+    ctx.lineWidth = 2
     ctx.lineCap = 'round'
-    // 되감기 화살표
-    ctx.beginPath()
-    ctx.arc(b.cx, b.cy, 9, Math.PI * 0.35, Math.PI * 1.75)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(b.cx + 2.5, b.cy - 11.5)
-    ctx.lineTo(b.cx + 7.5, b.cy - 7.5)
-    ctx.lineTo(b.cx + 1.5, b.cy - 4)
-    ctx.stroke()
+    ctx.lineJoin = 'round'
+    if (b.id === 'retry') icoRetry(ctx, b.cx, b.cy)
+    else if (b.id === 'share') icoShare(ctx, b.cx, b.cy)
+    else icoHome(ctx, b.cx, b.cy)
 
     ctx.textAlign = 'center'
     ctx.font = `600 11px ${FONT_STACK}`
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'
     ctx.fillText(b.label, b.cx, b.cy + b.r + 17)
   }
 

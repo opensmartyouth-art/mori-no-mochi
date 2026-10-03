@@ -1,5 +1,4 @@
 import {
-  COL_BG,
   COL_EYE,
   COL_MOCHI,
   COL_MOCHI_SHADE,
@@ -10,8 +9,6 @@ import {
   COL_STUMP_SIDE_LIT,
   COL_STUMP_TOP,
   COL_STUMP_TOP_LIT,
-  DESIGN_H,
-  DESIGN_W,
   TILE,
 } from '../config'
 import { isoEllipse } from '../game/iso'
@@ -21,35 +18,6 @@ const TAU = Math.PI * 2
 /** 그림자를 드리우는 방향(높이 1 unit 당 화면 px). 빛은 좌상단에서 온다. */
 const SHADOW_DIR_X = 1.15
 const SHADOW_DIR_Y = 0.42
-
-export function clearWorld(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = COL_BG
-  ctx.fillRect(0, 0, DESIGN_W, DESIGN_H)
-}
-
-/** 부드러운 타원 블롭 그림자. 하드 섀도우 금지(GDD §10). */
-export function drawBlobShadow(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  alpha: number,
-): void {
-  if (rx <= 0 || ry <= 0) return
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.scale(rx, ry)
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
-  g.addColorStop(0, `rgba(30, 36, 20, ${alpha})`)
-  g.addColorStop(0.62, `rgba(30, 36, 20, ${alpha * 0.86})`)
-  g.addColorStop(1, 'rgba(30, 36, 20, 0)')
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.arc(0, 0, 1, 0, TAU)
-  ctx.fill()
-  ctx.restore()
-}
 
 /** 그루터기 그림자의 중심 오프셋(윗면 중심 기준)과 크기. */
 export function stumpShadowGeom(r: number, h: number): {

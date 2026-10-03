@@ -1,8 +1,15 @@
-import { MOCHI_RX, MOCHI_RY, RING_MAX_SCALE, RING_TIME, TILE } from '../config'
+import {
+  DUST_TIME,
+  MOCHI_RX,
+  MOCHI_RY,
+  RING_MAX_SCALE,
+  RING_TIME,
+  TILE,
+} from '../config'
 import { clamp, clamp01, easeOutCubic, easeOutQuart, mix } from '../engine/ease'
 import { depth, isoEllipse, project } from '../game/iso'
-import type { Ring, World } from '../game/world'
-import { current } from '../game/world'
+import type { Dust, Ring, World } from '../game/world'
+import { current, shakeOffset } from '../game/world'
 import { drawMochi as paintMochi, stumpShadowGeom } from './scene'
 import { blitShadow, blitStump, stumpSprite, STUMP_VARIANTS } from './sprites'
 
@@ -22,6 +29,22 @@ function drawRing(ctx: CanvasRenderingContext2D, r: Ring): void {
   ctx.ellipse(p.x, p.y, e.x, e.y, 0, 0, TAU)
   ctx.stroke()
   ctx.restore()
+}
+
+/** 착지 먼지. 윗면에서 바깥으로 퍼지며 사라진다. */
+function drawDust(ctx: CanvasRenderingContext2D, d: Dust): void {
+  const t = clamp01(d.t / DUST_TIME)
+  const out = easeOutQuart(t)
+  const alpha = (1 - easeOutCubic(t)) * 0.62
+  const r = mix(d.reach * 0.22, d.reach * 0.1, t)
+  const p = project(d.wx + d.dx * d.reach * out, d.wy + d.dy * d.reach * out, d.wz)
+  const e = isoEllipse(r)
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = '#e6d8bb'
+  ctx.beginPath()
+  ctx.ellipse(p.x, p.y - e.y * 0.6, e.x, e.y, 0, 0, TAU)
+  ctx.fill()
+  ctx.globalAlpha = 1
 }
 
 function drawMochi(ctx: CanvasRenderingContext2D, w: World): void {
@@ -59,8 +82,9 @@ type Item =
 
 /** 먼 것부터 그린다. 모찌는 같은 깊이의 그루터기보다 아주 조금 앞. */
 export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
+  const sh = shakeOffset(w)
   ctx.save()
-  ctx.translate(w.camera.px, w.camera.py)
+  ctx.translate(w.camera.px + sh.x, w.camera.py + sh.y)
 
   const items: Item[] = w.stumps.map((s, i) => ({
     d: depth(s.wx, s.wy),
@@ -94,6 +118,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
     }
   }
 
+  for (const d of w.dust) drawDust(ctx, d)
   for (const r of w.rings) drawRing(ctx, r)
 
   ctx.restore()
@@ -103,8 +128,9 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
 export function drawDebugWorld(ctx: CanvasRenderingContext2D, w: World): void {
   const tgt = w.stumps[w.curIdx + 1]
   if (!tgt) return
+  const sh = shakeOffset(w)
   ctx.save()
-  ctx.translate(w.camera.px, w.camera.py)
+  ctx.translate(w.camera.px + sh.x, w.camera.py + sh.y)
   const p = project(tgt.wx, tgt.wy, tgt.h)
   const e = isoEllipse(tgt.r * 0.28)
   ctx.strokeStyle = 'rgba(120, 255, 140, 0.9)'
