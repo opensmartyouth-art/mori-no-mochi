@@ -115,7 +115,13 @@ startLoop(
 
     const sh = shakeOffset(world)
     // 바닥은 레터박스까지 칠한다. 비율이 다른 창에서 경계가 보이면 안 된다.
-    drawGround(ctx, world.camera.px + sh.x, world.camera.py + sh.y, stage.bleed)
+    drawGround(
+      ctx,
+      world.camera.px + sh.x,
+      world.camera.py + sh.y,
+      stage.bleed,
+      stage.scale,
+    )
     stage.clipDesign()
     drawWorld(ctx, world)
     if (DEBUG) drawDebugWorld(ctx, world)
@@ -123,11 +129,11 @@ startLoop(
     drawVignette(ctx, stage.bleed)
 
     if (screen === 'title') {
-      drawRecords(ctx)
-      drawTitle(ctx, screenT)
+      drawRecords(ctx, stage.safe)
+      drawTitle(ctx, screenT, stage.safe)
     }
     else if (world.phase === 'over') drawResult(ctx, world, world.overT)
-    else drawHud(ctx, world)
+    else drawHud(ctx, world, stage.safe)
 
     if (DEBUG) {
       drawDebug(

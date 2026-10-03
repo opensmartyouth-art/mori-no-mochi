@@ -18,15 +18,20 @@ const TAU = Math.PI * 2
  * 카메라와 함께 흐르게 해야 바닥처럼 보인다.
  *
  * 이음매가 보이지 않도록 모든 요소를 3x3 으로 감아서 그린다.
+ *
+ * 그루터기 스프라이트와 같은 이유로 기기 픽셀에 맞춰 굽는다.
+ * 디자인 해상도로 구우면 고DPI 기기에서 풀 가닥이 뭉개진다.
  */
 let pattern: CanvasPattern | null = null
+let builtScale = 0
 
-function buildTile(ctx: CanvasRenderingContext2D): CanvasPattern {
+function buildTile(ctx: CanvasRenderingContext2D, scale: number): CanvasPattern {
   const size = GROUND_TILE
   const off = document.createElement('canvas')
-  off.width = size
-  off.height = size
+  off.width = Math.ceil(size * scale)
+  off.height = Math.ceil(size * scale)
   const g = off.getContext('2d')!
+  g.scale(scale, scale)
   g.fillStyle = COL_BG
   g.fillRect(0, 0, size, size)
 
@@ -96,7 +101,10 @@ function buildTile(ctx: CanvasRenderingContext2D): CanvasPattern {
   }
   g.globalAlpha = 1
 
-  return ctx.createPattern(off, 'repeat')!
+  const pat = ctx.createPattern(off, 'repeat')!
+  // 패턴은 캔버스의 실제 픽셀 크기로 깔리므로 디자인 단위로 되돌린다.
+  pat.setTransform?.(new DOMMatrix([1 / scale, 0, 0, 1 / scale, 0, 0]))
+  return pat
 }
 
 /** 카메라 평행이동만큼 흘려서 그린다. rect 는 레터박스까지 포함한 범위. */
@@ -105,8 +113,13 @@ export function drawGround(
   panX: number,
   panY: number,
   rect: Rect,
+  scale = 1,
 ): void {
-  if (!pattern) pattern = buildTile(ctx)
+  const q = Math.max(0.5, Math.round(scale * 2) / 2)
+  if (!pattern || builtScale !== q) {
+    pattern = buildTile(ctx, q)
+    builtScale = q
+  }
   ctx.save()
   const ox = ((panX % GROUND_TILE) + GROUND_TILE) % GROUND_TILE
   const oy = ((panY % GROUND_TILE) + GROUND_TILE) % GROUND_TILE

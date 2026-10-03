@@ -20,6 +20,23 @@
         background: var(--bg);
         overscroll-behavior: none;
       }
+      /*
+        iOS 사파리는 주소창이 접히고 펴지면서 100% 가 흔들린다.
+        dvh 를 아는 브라우저는 이 줄로 덮어쓰고, 모르면 위의 100% 를 쓴다.
+      */
+      body { height: 100dvh; }
+      /* 노치/홈 인디케이터 여백을 재기 위한 탐침. 보이지 않는다. */
+      #safe-probe {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        visibility: hidden;
+        pointer-events: none;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
       body {
         -webkit-user-select: none;
         user-select: none;
@@ -35,6 +52,7 @@
     </style>
   </head>
   <body>
+    <div id="safe-probe"></div>
     <canvas id="stage"></canvas>
     <script type="module" src="/src/main.ts"></script>
   </body>

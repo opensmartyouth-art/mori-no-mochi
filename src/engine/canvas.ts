@@ -20,6 +20,11 @@ export interface Stage {
    * 배경을 여기까지 칠해야 비율이 다른 창에서 경계가 안 보인다.
    */
   readonly bleed: Rect
+  /**
+   * 노치·홈 인디케이터가 가리는 양을 디자인 px 로 환산한 값.
+   * HUD 를 이만큼 밀어야 상태바 밑에 깔리지 않는다.
+   */
+  readonly safe: { top: number; bottom: number }
   /** 프레임 시작: 버퍼 리사이즈 + 클리어 + 디자인 공간으로 변환(클립은 아직). */
   begin(): void
   /** 디자인 영역 바깥으로 월드가 새지 않게 자른다. */
@@ -41,6 +46,8 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   let bufW = 0
   let bufH = 0
   const bleed: Rect = { x: 0, y: 0, w: DESIGN_W, h: DESIGN_H }
+  const safe = { top: 0, bottom: 0 }
+  const probe = document.getElementById('safe-probe')
 
   const resize = (): void => {
     const dpr = Math.min(window.devicePixelRatio || 1, 3)
@@ -61,6 +68,16 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
     bleed.y = -offY / scale
     bleed.w = w / scale
     bleed.h = h / scale
+
+    // CSS px 로 잰 여백을 디자인 px 로 환산한다.
+    // 레터박스가 이미 가려 주는 만큼은 빼고 남은 침범분만 쓴다.
+    if (probe) {
+      const cs = getComputedStyle(probe)
+      const topCss = parseFloat(cs.paddingTop) || 0
+      const botCss = parseFloat(cs.paddingBottom) || 0
+      safe.top = Math.max(0, (topCss * dpr - offY) / scale)
+      safe.bottom = Math.max(0, (botCss * dpr - offY) / scale)
+    }
   }
 
   return {
@@ -69,6 +86,7 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
       return scale
     },
     bleed,
+    safe,
     begin() {
       resize()
       ctx.setTransform(1, 0, 0, 1, 0, 0)
