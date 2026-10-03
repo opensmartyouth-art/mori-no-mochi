@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { FIXED_DT, LOOKAHEAD, MAX_DIST, MIN_DIST } from '../src/config'
+import {
+  DESIGN_H,
+  DESIGN_W,
+  FIXED_DT,
+  LOOKAHEAD,
+  MAX_DIST,
+  MIN_DIST,
+} from '../src/config'
+import { panFor, stumpFocus } from '../src/game/camera'
+import { isoEllipse, project } from '../src/game/iso'
 import { createRng } from '../src/engine/rng'
 import { clamp01 } from '../src/engine/ease'
 import {
@@ -98,6 +107,28 @@ describe('무한 진행과 그루터기 회수', () => {
     for (let i = 0; i < 40; i++) {
       expect(w.stumps.length - w.curIdx).toBeGreaterThan(LOOKAHEAD)
       jump(w)
+    }
+  })
+})
+
+describe('카메라', () => {
+  // GDD §9 — 다음 그루터기가 화면 밖에 있으면 어디로 뛸지 알 수 없다.
+  // 가장자리에 아슬아슬하게 착지해 모찌가 중심에서 벗어난 상태까지 본다.
+  it('카메라가 자리 잡으면 다음 그루터기는 언제나 화면 안이다', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const w = createWorld(seed)
+      const rng = createRng(seed ^ 0x2c0ffee)
+      for (let i = 0; i < 60; i++) {
+        const pan = panFor(stumpFocus(w.stumps[w.curIdx]!))
+        const t = target(w)!
+        const p = project(t.wx, t.wy, t.h)
+        const e = isoEllipse(t.r)
+        expect(p.x + pan.x - e.x).toBeGreaterThan(0)
+        expect(p.x + pan.x + e.x).toBeLessThan(DESIGN_W)
+        expect(p.y + pan.y - e.y).toBeGreaterThan(0)
+        expect(p.y + pan.y + e.y).toBeLessThan(DESIGN_H)
+        jump(w, rng.range(-t.r * 0.985, t.r * 0.985))
+      }
     }
   })
 })

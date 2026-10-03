@@ -142,6 +142,18 @@ export function press(w: World): void {
   w.charge = 0
 }
 
+/**
+ * 차지를 점프 없이 되돌린다.
+ * 누르고 있는 중에 알림이 뜨거나 앱을 전환하면 pointerup 이 영영 안 올 수 있다.
+ * 그 사이 차지는 상한까지 차 있고, 돌아와 손을 떼는 순간 최대 점프가 나가
+ * 그대로 죽는다. 그럴 바엔 차지를 버리는 쪽이 낫다.
+ */
+export function cancelCharge(w: World): void {
+  if (w.phase !== 'charging') return
+  w.phase = 'idle'
+  w.charge = 0
+}
+
 export function release(w: World): void {
   if (w.phase !== 'charging') return
   const tgt = target(w)

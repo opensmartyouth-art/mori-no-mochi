@@ -11,6 +11,7 @@ import { shareResult } from './render/share'
 import { totalScore } from './game/score'
 import { submit } from './game/session'
 import {
+  cancelCharge,
   createWorld,
   press,
   release,
@@ -73,7 +74,13 @@ window.addEventListener('pointerup', (e) => {
   e.preventDefault()
   release(world)
 })
-window.addEventListener('pointercancel', () => release(world))
+// 포인터가 중간에 빼앗기거나(스크롤 제스처, 전화) 창이 포커스를 잃으면
+// 점프시키지 않고 차지만 버린다. 돌아와서 떼는 순간 최대 점프가 나가면 안 된다.
+window.addEventListener('pointercancel', () => cancelCharge(world))
+window.addEventListener('blur', () => cancelCharge(world))
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') cancelCharge(world)
+})
 
 // 데스크톱에서 손맛을 보려면 스페이스가 편하다. 입력 자체는 똑같이 하나다.
 window.addEventListener('keydown', (e) => {
@@ -107,10 +114,13 @@ startLoop(
     const { ctx } = stage
 
     const sh = shakeOffset(world)
-    drawGround(ctx, world.camera.px + sh.x, world.camera.py + sh.y)
+    // 바닥은 레터박스까지 칠한다. 비율이 다른 창에서 경계가 보이면 안 된다.
+    drawGround(ctx, world.camera.px + sh.x, world.camera.py + sh.y, stage.bleed)
+    stage.clipDesign()
     drawWorld(ctx, world)
-    drawVignette(ctx)
     if (DEBUG) drawDebugWorld(ctx, world)
+    stage.unclip()
+    drawVignette(ctx, stage.bleed)
 
     if (screen === 'title') {
       drawRecords(ctx)

@@ -9,6 +9,7 @@ import {
   VIGNETTE,
 } from '../config'
 import { createRng } from '../engine/rng'
+import type { Rect } from '../engine/canvas'
 
 const TAU = Math.PI * 2
 
@@ -88,11 +89,12 @@ function buildTile(ctx: CanvasRenderingContext2D): CanvasPattern {
   return ctx.createPattern(off, 'repeat')!
 }
 
-/** 카메라 평행이동만큼 흘려서 그린다. */
+/** 카메라 평행이동만큼 흘려서 그린다. rect 는 레터박스까지 포함한 범위. */
 export function drawGround(
   ctx: CanvasRenderingContext2D,
   panX: number,
   panY: number,
+  rect: Rect,
 ): void {
   if (!pattern) pattern = buildTile(ctx)
   ctx.save()
@@ -100,17 +102,17 @@ export function drawGround(
   const oy = ((panY % GROUND_TILE) + GROUND_TILE) % GROUND_TILE
   ctx.translate(ox, oy)
   ctx.fillStyle = pattern
-  ctx.fillRect(-ox, -oy, DESIGN_W, DESIGN_H)
+  ctx.fillRect(rect.x - ox, rect.y - oy, rect.w, rect.h)
   ctx.restore()
 }
 
 let vignette: CanvasGradient | null = null
 
 /** 가장자리를 아주 살짝 눌러 시선을 가운데로 모은다. 화면 기준이라 한 번만 만든다. */
-export function drawVignette(ctx: CanvasRenderingContext2D): void {
+export function drawVignette(ctx: CanvasRenderingContext2D, rect: Rect): void {
   if (!vignette) vignette = makeVignette(ctx)
   ctx.fillStyle = vignette
-  ctx.fillRect(0, 0, DESIGN_W, DESIGN_H)
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 }
 
 function makeVignette(ctx: CanvasRenderingContext2D): CanvasGradient {

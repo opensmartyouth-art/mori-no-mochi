@@ -17,7 +17,7 @@ export async function shareResult(w: World): Promise<void> {
   if (!ctx) return
   ctx.scale(scale, scale)
 
-  drawGround(ctx, 120, 60)
+  drawGround(ctx, 120, 60, { x: 0, y: 0, w: DESIGN_W, h: DESIGN_H })
   drawResult(ctx, w, 1)
 
   ctx.textAlign = 'center'
