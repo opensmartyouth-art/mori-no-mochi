@@ -1,12 +1,13 @@
 import { AIR_PER_DIST, BASE_AIR, GRAVITY } from '../config'
-import type { Dir } from './types'
 
 /** 점프 한 번의 확정된 계획. 순수 데이터 — 렌더를 모른다. */
 export interface JumpPlan {
   fromX: number
   fromY: number
   fromZ: number
-  dir: Dir
+  /** 수평 진행 방향(단위벡터). 모찌가 선 지점에서 목표 중심을 향한다. */
+  dirX: number
+  dirY: number
   /** 수평 이동 거리(unit). */
   dist: number
   /** 체공시간(초). */
@@ -40,7 +41,8 @@ export function planJump(
   fromX: number,
   fromY: number,
   fromZ: number,
-  dir: Dir,
+  dirX: number,
+  dirY: number,
   dist: number,
   targetZ: number,
 ): JumpPlan {
@@ -49,7 +51,8 @@ export function planJump(
     fromX,
     fromY,
     fromZ,
-    dir,
+    dirX,
+    dirY,
     dist,
     airTime,
     vz0: initialVz(fromZ, targetZ, airTime),
@@ -66,8 +69,8 @@ export interface Pos3 {
 export function samplePos(p: JumpPlan, tau: number): Pos3 {
   const travel = (p.dist * tau) / p.airTime
   return {
-    wx: p.fromX + (p.dir === 'x' ? travel : 0),
-    wy: p.fromY + (p.dir === 'y' ? travel : 0),
+    wx: p.fromX + p.dirX * travel,
+    wy: p.fromY + p.dirY * travel,
     wz: p.fromZ + p.vz0 * tau - 0.5 * GRAVITY * tau * tau,
   }
 }

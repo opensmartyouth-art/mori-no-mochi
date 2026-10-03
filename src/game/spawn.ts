@@ -1,7 +1,7 @@
 import {
   EASY_COUNT,
-  MAX_DIST,
-  MIN_DIST,
+  GEN_MAX_DIST,
+  GEN_MIN_DIST,
   RAMP_COUNT,
   SMALL_RADIUS_CHANCE,
   START_MAX_DIST,
@@ -20,21 +20,19 @@ export function difficulty(count: number): number {
 }
 
 /**
- * 다음 그루터기는 **모찌가 실제로 서 있는 지점**에서 +x 또는 +y 로 놓는다.
- * 그루터기 중심이 아니라 착지 지점을 기준으로 삼기 때문에
- * 필요한 점프 거리가 언제나 차지 가능 범위 안에 들어온다(도달 불가 상황이 없다).
- * 대신 그루터기들이 격자에서 조금씩 어긋나며 흩어지는데, 원작의 모양이 그렇다.
+ * 다음 그루터기는 **직전 그루터기 중심**에서 +x(우상향) 또는 +y(좌상향)로 놓는다.
+ * 모찌의 착지 지점이 아니라 중심을 기준으로 삼아야 앞쪽 여러 개를 미리 만들어 둘 수 있다.
+ * 착지 오차만큼 실제 필요 거리가 달라지는데, 그 폭은 config 의 차지 범위가 덮는다.
  */
 export function spawnNext(
   fromX: number,
   fromY: number,
   rng: Rng,
-  count: number,
   index: number,
 ): Stump {
-  const d0 = difficulty(count)
-  const lo = mix(START_MIN_DIST, MIN_DIST, d0)
-  const hi = mix(START_MAX_DIST, MAX_DIST, d0)
+  const d0 = difficulty(index)
+  const lo = mix(START_MIN_DIST, GEN_MIN_DIST, d0)
+  const hi = mix(START_MAX_DIST, GEN_MAX_DIST, d0)
   const dist = rng.range(lo, hi)
   const dir: Dir = rng.chance(0.5) ? 'x' : 'y'
 

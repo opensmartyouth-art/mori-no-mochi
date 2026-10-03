@@ -31,17 +31,33 @@ export const STUMP_RADII = [1.0, 0.86, 0.72]
 export const STUMP_HEIGHTS = [0.45, 0.78]
 
 // ── 거리 / 난이도 커브 ────────────────────────────────────────────
-/** 차지 0 → 최소 거리, 차지 1 → 최대 거리. 생성 거리도 이 범위를 넘지 않는다. */
-export const MIN_DIST = 2.1
-export const MAX_DIST = 4.6
-/** 시작 구간의 좁은 생성 범위. 초반 EASY_COUNT 개는 여기서만 뽑는다. */
-export const START_MIN_DIST = 2.2
+/**
+ * 차지 0 → 최소 거리, 차지 1 → 최대 거리.
+ *
+ * 그루터기는 앞으로 LOOKAHEAD 개까지 미리 **직전 그루터기 중심 기준**으로 놓인다.
+ * 모찌는 중심에서 최대 그루터기 반지름만큼 벗어나 서 있을 수 있으므로,
+ * 실제로 필요한 거리는 생성 거리 ± 반지름까지 벌어진다.
+ * 차지 범위는 그 최악을 덮어야 도달 불가가 생기지 않는다.
+ *   생성 [2.3, 4.3] ± 1.0  →  [1.3, 5.3] ⊂ [MIN_DIST, MAX_DIST]
+ */
+export const MIN_DIST = 1.3
+export const MAX_DIST = 5.3
+/** 생성 거리 범위. 초반 EASY_COUNT 개는 START 쪽만 쓴다. */
+export const GEN_MIN_DIST = 2.3
+export const GEN_MAX_DIST = 4.3
+export const START_MIN_DIST = 2.3
 export const START_MAX_DIST = 3.2
+/** 앞쪽으로 미리 만들어 두는 그루터기 수. 원작처럼 길이 보여야 한다. */
+export const LOOKAHEAD = 4
 /** 이 개수까지는 난이도 고정, 이후 RAMP_COUNT 까지 선형으로 올린다. */
 export const EASY_COUNT = 10
 export const RAMP_COUNT = 45
 /** 난이도 0 → 1 에 따라 작은 반지름이 뽑힐 확률. */
 export const SMALL_RADIUS_CHANCE = 0.75
+/** 화면 아래로 이만큼(px) 넘어간 그루터기는 배열에서 버린다. */
+export const CULL_MARGIN = 140
+/** 어떤 경우에도 뒤쪽 그루터기를 이 개수보다 적게 남기지 않는다. */
+export const KEEP_BEHIND = 2
 
 // ── 모찌 ──────────────────────────────────────────────────────────
 /** 기본 반축(px). 살짝 세로로 긴 달걀꼴. */
@@ -49,8 +65,11 @@ export const MOCHI_RX = 13
 export const MOCHI_RY = 15
 
 // ── 차지 ──────────────────────────────────────────────────────────
-/** 0 → 최대 차지까지 걸리는 시간(초). 영상 실측 약 0.7s. */
-export const CHARGE_TIME = 0.78
+/**
+ * 0 → 최대 차지까지 걸리는 시간(초). 영상 실측으로 중간 세기 차지가 약 0.7s 였다.
+ * 차지 범위가 4.0 unit 이므로 약 4.2 unit/s. 가장 큰 그루터기의 퍼펙트 창이 약 150ms.
+ */
+export const CHARGE_TIME = 0.95
 /** 최대 차지 시 모찌 높이가 줄어드는 비율. 스쿼시가 곧 게이지다. */
 export const SQUASH_MAX = 0.46
 /** 차지 상한 도달 알림용 떨림. */
@@ -69,7 +88,7 @@ export const FLIGHT_STRETCH_BASE = 0.1
 
 // ── 착지 판정 ─────────────────────────────────────────────────────
 /** PERFECT_R = 그루터기 반지름 × 이 비율. GDD 기준 25~30%. */
-export const PERFECT_R_RATIO = 0.28
+export const PERFECT_R_RATIO = 0.3
 /** 착지 순간 눌리는 양과 회복 시간(초). */
 export const LAND_SQUASH = 0.34
 export const LAND_RECOVER = 0.26
