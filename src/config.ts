@@ -1,0 +1,114 @@
+/**
+ * 튜닝 상수 단일 소스.
+ * 숫자를 바꾸고 싶으면 이 파일만 본다. 다른 파일에 리터럴을 두지 않는다.
+ *
+ * 월드 단위(unit)는 평면 거리의 기준이다. 그루터기 기본 반지름이 1.0 unit,
+ * TILE 이 1 unit 을 몇 픽셀로 투영할지 정한다.
+ */
+
+// ── 화면 ──────────────────────────────────────────────────────────
+/** 디자인 공간. 원작 영상 588x1278(1:2.173)에 맞춘 세로 고정 비율. */
+export const DESIGN_W = 390
+export const DESIGN_H = 844
+
+// ── 루프 ──────────────────────────────────────────────────────────
+/** 물리 스텝. 60Hz 고정. */
+export const FIXED_DT = 1 / 60
+/** 탭 전환 등으로 프레임이 튀었을 때 따라잡기 상한(초). */
+export const MAX_FRAME_DT = 0.25
+
+// ── 아이소메트릭 투영 ─────────────────────────────────────────────
+/** 월드 1 unit → 픽셀. */
+export const TILE = 50
+/** 2:1 아이소. */
+export const ISO_X = 0.5
+export const ISO_Y = 0.25
+
+// ── 그루터기 ──────────────────────────────────────────────────────
+/** 반지름 3종(월드 unit). */
+export const STUMP_RADII = [1.0, 0.86, 0.72]
+/** 높이 2종(월드 unit). 낮은 것·높은 것. */
+export const STUMP_HEIGHTS = [0.45, 0.78]
+
+// ── 거리 / 난이도 커브 ────────────────────────────────────────────
+/** 차지 0 → 최소 거리, 차지 1 → 최대 거리. 생성 거리도 이 범위를 넘지 않는다. */
+export const MIN_DIST = 2.1
+export const MAX_DIST = 4.6
+/** 시작 구간의 좁은 생성 범위. 초반 EASY_COUNT 개는 여기서만 뽑는다. */
+export const START_MIN_DIST = 2.2
+export const START_MAX_DIST = 3.2
+/** 이 개수까지는 난이도 고정, 이후 RAMP_COUNT 까지 선형으로 올린다. */
+export const EASY_COUNT = 10
+export const RAMP_COUNT = 45
+/** 난이도 0 → 1 에 따라 작은 반지름이 뽑힐 확률. */
+export const SMALL_RADIUS_CHANCE = 0.75
+
+// ── 차지 ──────────────────────────────────────────────────────────
+/** 0 → 최대 차지까지 걸리는 시간(초). 영상 실측 약 0.7s. */
+export const CHARGE_TIME = 0.78
+/** 최대 차지 시 모찌 높이가 줄어드는 비율. 스쿼시가 곧 게이지다. */
+export const SQUASH_MAX = 0.46
+/** 차지 상한 도달 알림용 떨림. */
+export const CHARGE_WOBBLE_AMP = 0.022
+export const CHARGE_WOBBLE_HZ = 14
+
+// ── 점프 물리 ─────────────────────────────────────────────────────
+/** 중력(unit/s²). 체공시간과 함께 포물선 높이를 결정한다. */
+export const GRAVITY = 46
+/** 체공시간 = BASE_AIR + dist * AIR_PER_DIST (초). 영상 실측 약 0.4s. */
+export const BASE_AIR = 0.3
+export const AIR_PER_DIST = 0.052
+/** 비행 중 세로 스트레치. |vz| 비례분 + 상시분. */
+export const FLIGHT_STRETCH = 0.26
+export const FLIGHT_STRETCH_BASE = 0.1
+
+// ── 착지 판정 ─────────────────────────────────────────────────────
+/** PERFECT_R = 그루터기 반지름 × 이 비율. GDD 기준 25~30%. */
+export const PERFECT_R_RATIO = 0.28
+/** 착지 순간 눌리는 양과 회복 시간(초). */
+export const LAND_SQUASH = 0.34
+export const LAND_RECOVER = 0.26
+
+// ── 실패(낙하) ────────────────────────────────────────────────────
+/** 모서리에서 미끄러지는 거리(unit)와 결과 카드까지의 시간(초). */
+export const FALL_SLIDE = 0.9
+export const FALL_TIME = 1.05
+export const FALL_GRAVITY = 30
+
+// ── 스코어 ────────────────────────────────────────────────────────
+/** 그루터기 1개 = 10점. */
+export const STUMP_SCORE = 10
+/** 퍼펙트 점수 = PERFECT_BASE × 현재 연속 횟수. */
+export const PERFECT_BASE = 10
+/**
+ * 연속 배수의 상한. 원작 결과 카드(최고 3연속)로는 상한을 확정할 수 없다.
+ * 타이틀 기록에 "퍼펙트 11연속"이 있으니 최소 11까지는 올라간다.
+ * 확정 전까지 무제한. GDD §14 열린 질문.
+ */
+export const PERFECT_MULT_CAP = Number.POSITIVE_INFINITY
+
+// ── 카메라 ────────────────────────────────────────────────────────
+/** 착지 후 추종 보간. 점프 중에는 거의 고정. */
+export const CAM_LERP = 0.08
+export const CAM_LERP_AIR = 0.012
+/** 모찌를 둘 화면상 위치(0~1). 중앙보다 약간 왼쪽·아래. */
+export const CAM_ANCHOR_X = 0.45
+export const CAM_ANCHOR_Y = 0.6
+
+// ── 연출 타이밍 ───────────────────────────────────────────────────
+export const RING_TIME = 0.55
+export const RING_MAX_SCALE = 1.9
+export const LABEL_TIME = 0.9
+
+// ── 색 ────────────────────────────────────────────────────────────
+export const COL_BG = '#6f7a54'
+export const COL_STUMP_TOP = '#d8c398'
+export const COL_STUMP_SIDE = '#5d4330'
+export const COL_MOCHI = '#fbfaf6'
+export const COL_INK = '#2f3524'
+export const COL_TEXT = '#ffffff'
+export const COL_GOLD = '#e8c07a'
+export const COL_SHADOW = 'rgba(32, 38, 22, 0.26)'
+
+export const FONT_STACK =
+  '-apple-system, "SF Pro Rounded", "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif'
