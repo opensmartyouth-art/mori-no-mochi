@@ -139,11 +139,11 @@ export const COL_BG = '#6f7a54'
 /** 바닥 얼룩. 배경과의 대비를 아주 낮게 유지한다. */
 export const COL_BG_DARK = '#67724c'
 export const COL_BG_LIGHT = '#78835d'
-export const COL_GRASS = '#828d61'
+export const COL_GRASS = '#8fa05c'
 
-export const COL_STUMP_TOP = '#d7c399'
+export const COL_STUMP_TOP = '#ddc9a1'
 /** 윗면 가운데 하이라이트. 빛은 좌상단에서 온다. */
-export const COL_STUMP_TOP_LIT = '#e4d3ae'
+export const COL_STUMP_TOP_LIT = '#ead9b7'
 export const COL_STUMP_RING = 'rgba(146, 112, 73, 0.26)'
 export const COL_STUMP_RIM = 'rgba(112, 84, 55, 0.4)'
 export const COL_STUMP_SIDE = '#5d4330'
@@ -153,6 +153,8 @@ export const COL_STUMP_SIDE_DARK = '#473225'
 export const COL_MOCHI = '#fcfbf7'
 export const COL_MOCHI_SHADE = '#e4dfd1'
 export const COL_EYE = '#3a3f2c'
+/** 볼. 원작 영상을 확대하면 분홍 볼이 있다. 이게 모찌의 인상을 만든다. */
+export const COL_BLUSH = 'rgba(240, 160, 160, 0.45)'
 
 export const COL_INK = '#2f3524'
 export const COL_TEXT = '#ffffff'

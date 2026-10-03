@@ -1,4 +1,5 @@
 import {
+  COL_BLUSH,
   COL_EYE,
   COL_MOCHI,
   COL_MOCHI_SHADE,
@@ -85,14 +86,20 @@ export function paintStump(
   ctx.fillStyle = sideGrad
   ctx.fillRect(top.x - e.x, top.y - e.y, e.x * 2, botY - top.y + e.y * 2)
 
-  const grains = Math.round(7 + r * 6)
-  for (let i = 0; i < grains; i++) {
+  // 결은 세로가 아니라 **대각**이다. 원작을 확대하면 좌상→우하 해칭이 보인다.
+  const span = e.x * 2 + (botY - top.y) + e.y * 4
+  const step = 5.5
+  ctx.lineWidth = 1.6
+  ctx.lineCap = 'butt'
+  for (let i = 0; i * step < span; i++) {
     const seed = hash(s.index * 31 + i)
-    const u = (i + 0.5) / grains + (seed - 0.5) * 0.05
-    const x = top.x - e.x + u * e.x * 2
-    ctx.globalAlpha = 0.05 + seed * 0.09
-    ctx.fillStyle = seed > 0.5 ? COL_STUMP_SIDE_DARK : COL_STUMP_SIDE_LIT
-    ctx.fillRect(x, top.y - e.y, 0.8 + seed * 1.6, botY - top.y + e.y * 2)
+    const x0 = top.x - e.x - (botY - top.y) + i * step + (seed - 0.5) * 1.2
+    ctx.globalAlpha = 0.05 + seed * 0.08
+    ctx.strokeStyle = seed > 0.5 ? COL_STUMP_SIDE_DARK : COL_STUMP_SIDE_LIT
+    ctx.beginPath()
+    ctx.moveTo(x0, top.y - e.y)
+    ctx.lineTo(x0 + (botY - top.y) + e.y * 2, botY + e.y)
+    ctx.stroke()
   }
   ctx.globalAlpha = 1
 
@@ -131,7 +138,7 @@ export function paintStump(
   const oy = (hash(s.index * 13) - 0.5) * e.y * 0.3
   for (let i = 1; i <= rings; i++) {
     const k = i / (rings + 0.6)
-    ctx.lineWidth = 0.7 + hash(s.index + i) * 0.7
+    ctx.lineWidth = 0.6 + hash(s.index + i) * 0.6
     ctx.beginPath()
     ctx.ellipse(top.x + ox * k, top.y + oy * k, e.x * k, e.y * k, 0, 0, TAU)
     ctx.stroke()
@@ -176,6 +183,14 @@ export function drawMochi(ctx: CanvasRenderingContext2D, m: MochiLook): void {
   const ex = m.rx * 0.36
   const ey = cy + m.ry * 0.08
   const shift = m.look * m.rx * 0.12
+
+  // 볼 — 눈 바깥 아래. 작고 흐려야 한다.
+  ctx.fillStyle = COL_BLUSH
+  ctx.beginPath()
+  ctx.ellipse(m.x - ex * 1.5 + shift, ey + m.ry * 0.18, m.rx * 0.17, m.ry * 0.1, 0, 0, TAU)
+  ctx.ellipse(m.x + ex * 1.5 + shift, ey + m.ry * 0.18, m.rx * 0.17, m.ry * 0.1, 0, 0, TAU)
+  ctx.fill()
+
   ctx.fillStyle = COL_EYE
   ctx.beginPath()
   ctx.ellipse(m.x - ex + shift, ey, m.rx * 0.11, m.ry * 0.14, 0, 0, TAU)

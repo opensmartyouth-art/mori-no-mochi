@@ -19,30 +19,37 @@ function drawRing(ctx: CanvasRenderingContext2D, r: Ring): void {
   const t = clamp01(r.t / RING_TIME)
   const grow = easeOutQuart(t)
   const scale = mix(1, RING_MAX_SCALE, grow)
-  const alpha = (1 - easeOutCubic(t)) * 0.75
+  const alpha = (1 - easeOutCubic(t)) * 0.95
   const e = isoEllipse(r.r * scale)
   const p = project(r.wx, r.wy, r.wz)
   ctx.save()
   ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`
-  ctx.lineWidth = mix(3, 1, grow)
+  ctx.lineWidth = mix(6, 1.6, grow)
   ctx.beginPath()
   ctx.ellipse(p.x, p.y, e.x, e.y, 0, 0, TAU)
   ctx.stroke()
   ctx.restore()
 }
 
-/** 착지 먼지. 윗면에서 바깥으로 퍼지며 사라진다. */
+/**
+ * 착지 알갱이. 원작을 확대해 보면 뿌연 먼지가 아니라
+ * 흰 알갱이 몇 개가 또렷하게 튄다. 떡고물 같은 질감이다.
+ */
 function drawDust(ctx: CanvasRenderingContext2D, d: Dust): void {
   const t = clamp01(d.t / DUST_TIME)
   const out = easeOutQuart(t)
-  const alpha = (1 - easeOutCubic(t)) * 0.62
-  const r = mix(d.reach * 0.22, d.reach * 0.1, t)
-  const p = project(d.wx + d.dx * d.reach * out, d.wy + d.dy * d.reach * out, d.wz)
-  const e = isoEllipse(r)
+  const alpha = (1 - easeOutCubic(t)) * 0.95
+  // 튀어 올랐다 떨어진다
+  const hop = Math.sin(Math.PI * Math.min(1, t * 1.25)) * 0.16
+  const p = project(
+    d.wx + d.dx * d.reach * out,
+    d.wy + d.dy * d.reach * out,
+    d.wz + hop,
+  )
   ctx.globalAlpha = alpha
-  ctx.fillStyle = '#e6d8bb'
+  ctx.fillStyle = '#fbf7ec'
   ctx.beginPath()
-  ctx.ellipse(p.x, p.y - e.y * 0.6, e.x, e.y, 0, 0, TAU)
+  ctx.arc(p.x, p.y, mix(2.2, 1.1, t), 0, TAU)
   ctx.fill()
   ctx.globalAlpha = 1
 }
