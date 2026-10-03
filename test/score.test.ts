@@ -99,6 +99,23 @@ describe('원작 결과 카드 역산', () => {
     expect([...hits]).toEqual(['3,3,1,1'])
   })
 
+  /**
+   * 배수 상한은 원작 데이터로 역산되지 않아 "무제한"으로 결정했다.
+   * 나중에 상한을 두더라도 그건 의도한 변경이어야 하므로 여기서 고정한다.
+   */
+  it('배수는 상한 없이 연속 횟수를 그대로 따라간다', () => {
+    let s = createScore()
+    let expected = 0
+    for (let k = 1; k <= 20; k++) {
+      s = applyLanding(s, 'perfect')
+      expected += 10 * k
+      expect(s.combo).toBe(k)
+      expect(s.perfectScore).toBe(expected)
+    }
+    // 11연속 한 묶음이면 그 묶음만 660점
+    expect(play(Array<Judgement>(11).fill('perfect')).perfectScore).toBe(660)
+  })
+
   it('실패는 점수에도 개수에도 들어가지 않는다', () => {
     const s = play(['perfect', 'ok', 'miss'])
     expect(s.stumps).toBe(2)
