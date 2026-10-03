@@ -13,6 +13,7 @@ import { submit } from './game/session'
 import {
   cancelCharge,
   createWorld,
+  interpolate,
   press,
   release,
   shakeOffset,
@@ -108,23 +109,19 @@ startLoop(
       submit(world.score.stumps, world.score.bestCombo, totalScore(world.score))
     }
   },
-  (_alpha, stats) => {
+  (alpha, stats) => {
     stage.begin()
     setSpriteScale(stage.scale)
     const { ctx } = stage
 
+    // 물리는 60Hz 고정이라 120Hz 화면에서는 두 스텝 사이를 보간해야 매끄럽다.
+    const v = interpolate(world, alpha)
     const sh = shakeOffset(world)
     // 바닥은 레터박스까지 칠한다. 비율이 다른 창에서 경계가 보이면 안 된다.
-    drawGround(
-      ctx,
-      world.camera.px + sh.x,
-      world.camera.py + sh.y,
-      stage.bleed,
-      stage.scale,
-    )
+    drawGround(ctx, v.camX + sh.x, v.camY + sh.y, stage.bleed, stage.scale)
     stage.clipDesign()
-    drawWorld(ctx, world)
-    if (DEBUG) drawDebugWorld(ctx, world)
+    drawWorld(ctx, world, v)
+    if (DEBUG) drawDebugWorld(ctx, world, v)
     stage.unclip()
     drawVignette(ctx, stage.bleed)
 

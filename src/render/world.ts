@@ -4,11 +4,10 @@ import {
   MOCHI_RY,
   RING_MAX_SCALE,
   RING_TIME,
-  TILE,
 } from '../config'
 import { clamp, clamp01, easeOutCubic, easeOutQuart, mix } from '../engine/ease'
 import { depth, isoEllipse, project } from '../game/iso'
-import type { Dust, Ring, World } from '../game/world'
+import type { Dust, Ring, Snapshot, World } from '../game/world'
 import { current, shakeOffset } from '../game/world'
 import { drawMochi as paintMochi, stumpShadowGeom } from './scene'
 import { blitShadow, blitStump, stumpSprite, STUMP_VARIANTS } from './sprites'
@@ -54,11 +53,14 @@ function drawDust(ctx: CanvasRenderingContext2D, d: Dust): void {
   ctx.globalAlpha = 1
 }
 
-function drawMochi(ctx: CanvasRenderingContext2D, w: World): void {
-  const m = w.mochi
-  const p = project(m.wx, m.wy, m.wz)
-  const rx = MOCHI_RX * m.sx
-  const ry = MOCHI_RY * m.sy
+function drawMochi(
+  ctx: CanvasRenderingContext2D,
+  w: World,
+  v: Snapshot,
+): void {
+  const p = project(v.mx, v.my, v.mz)
+  const rx = MOCHI_RX * v.sx
+  const ry = MOCHI_RY * v.sy
 
   // 점프 직전 다음 그루터기 쪽을 본다(GDD §4).
   const tgt = w.stumps[w.curIdx + 1]
@@ -67,9 +69,9 @@ function drawMochi(ctx: CanvasRenderingContext2D, w: World): void {
     : 0
 
   // 발밑 그림자. 공중에서는 지면으로 떨어뜨리고 높이만큼 옅고 작게.
-  const standZ = w.phase === 'flying' || w.phase === 'falling' ? 0 : m.wz
-  const lift = Math.max(0, m.wz - standZ)
-  const ground = project(m.wx, m.wy, standZ)
+  const standZ = w.phase === 'flying' || w.phase === 'falling' ? 0 : v.mz
+  const lift = Math.max(0, v.mz - standZ)
+  const ground = project(v.mx, v.my, standZ)
   const k = clamp01(1 - lift / 2.2)
   blitShadow(
     ctx,
@@ -88,10 +90,14 @@ type Item =
   | { d: number; kind: 'mochi' }
 
 /** 먼 것부터 그린다. 모찌는 같은 깊이의 그루터기보다 아주 조금 앞. */
-export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
+export function drawWorld(
+  ctx: CanvasRenderingContext2D,
+  w: World,
+  v: Snapshot,
+): void {
   const sh = shakeOffset(w)
   ctx.save()
-  ctx.translate(w.camera.px + sh.x, w.camera.py + sh.y)
+  ctx.translate(v.camX + sh.x, v.camY + sh.y)
 
   const items: Item[] = w.stumps.map((s, i) => ({
     d: depth(s.wx, s.wy),
@@ -102,9 +108,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
   // 모찌의 평면 깊이가 그루터기보다 커져서 그루터기 뒤로 그려져 버린다.
   const airborne = w.phase === 'flying' || w.phase === 'falling'
   const cur = current(w)
-  const mochiDepth = airborne
-    ? depth(w.mochi.wx, w.mochi.wy)
-    : depth(cur.wx, cur.wy)
+  const mochiDepth = airborne ? depth(v.mx, v.my) : depth(cur.wx, cur.wy)
   items.push({ d: mochiDepth - 1e-3, kind: 'mochi' })
   items.sort((a, b) => b.d - a.d)
 
@@ -121,7 +125,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
         top.y,
       )
     } else {
-      drawMochi(ctx, w)
+      drawMochi(ctx, w, v)
     }
   }
 
@@ -132,12 +136,16 @@ export function drawWorld(ctx: CanvasRenderingContext2D, w: World): void {
 }
 
 /** 디버그용: 지금 노리는 그루터기의 퍼펙트 반경을 그린다. */
-export function drawDebugWorld(ctx: CanvasRenderingContext2D, w: World): void {
+export function drawDebugWorld(
+  ctx: CanvasRenderingContext2D,
+  w: World,
+  v: Snapshot,
+): void {
   const tgt = w.stumps[w.curIdx + 1]
   if (!tgt) return
   const sh = shakeOffset(w)
   ctx.save()
-  ctx.translate(w.camera.px + sh.x, w.camera.py + sh.y)
+  ctx.translate(v.camX + sh.x, v.camY + sh.y)
   const p = project(tgt.wx, tgt.wy, tgt.h)
   const e = isoEllipse(tgt.r * 0.28)
   ctx.strokeStyle = 'rgba(120, 255, 140, 0.9)'
@@ -154,4 +162,3 @@ export function drawDebugWorld(ctx: CanvasRenderingContext2D, w: World): void {
   ctx.restore()
 }
 
-export { TILE }

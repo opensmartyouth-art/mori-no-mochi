@@ -39,7 +39,8 @@ src/
   config.ts          튜닝 상수 단일 소스. 숫자를 바꾸려면 여기만 본다
   main.ts            부팅, 입력, 화면 전환(타이틀 ↔ 플레이 ↔ 결과)
   engine/
-    loop.ts          고정 타임스텝(물리 60Hz) + 렌더 보간 alpha
+    loop.ts          고정 타임스텝(물리 60Hz) + 렌더 보간 alpha.
+                     120Hz 화면에서는 두 스텝 사이를 world.interpolate() 로 섞는다
     canvas.ts        디자인 공간 390x844 를 contain 으로 맞추는 스케일러.
                      레터박스 범위(bleed)와 노치 여백(safe)을 노출한다
     ease.ts  rng.ts  보간 유틸 / 결정적 난수

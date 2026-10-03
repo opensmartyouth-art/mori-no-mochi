@@ -30,7 +30,7 @@ import {
   STUMP_HEIGHTS,
   STUMP_RADII,
 } from '../config'
-import { clamp01, easeOutCubic } from '../engine/ease'
+import { clamp01, easeOutCubic, mix } from '../engine/ease'
 import { createRng, type Rng } from '../engine/rng'
 import { createCamera, stumpFocus, updateCamera, type Camera } from './camera'
 import { projectY } from './iso'
@@ -94,6 +94,19 @@ export interface World {
   fall: { vx: number; vy: number; vz: number }
   dust: Dust[]
   shake: { t: number; mag: number }
+  /** 직전 물리 스텝의 값. 렌더가 두 스텝 사이를 보간한다. */
+  prev: Snapshot
+}
+
+/** 보간에 필요한 것만. 시각 상태라 판정에는 쓰지 않는다. */
+export interface Snapshot {
+  mx: number
+  my: number
+  mz: number
+  sx: number
+  sy: number
+  camX: number
+  camY: number
 }
 
 export function createWorld(seed = (Math.random() * 1e9) | 0): World {
@@ -105,6 +118,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     h: STUMP_HEIGHTS[0]!,
     index: 0,
   }
+  const cam = createCamera(first)
   const stumps: Stump[] = [first]
   for (let i = 1; i <= LOOKAHEAD; i++) {
     const prev = stumps[i - 1]!
@@ -122,7 +136,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     landT: LAND_RECOVER,
     lastVerdict: null,
     score: createScore(),
-    camera: createCamera(first),
+    camera: cam,
     rings: [],
     label: null,
     overT: 0,
@@ -130,6 +144,34 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     fall: { vx: 0, vy: 0, vz: 0 },
     dust: [],
     shake: { t: SHAKE_TIME, mag: 0 },
+    prev: {
+      mx: first.wx,
+      my: first.wy,
+      mz: first.h,
+      sx: 1,
+      sy: 1,
+      camX: cam.px,
+      camY: cam.py,
+    },
+  }
+}
+
+/**
+ * 물리는 60Hz 로 고정이라, 120Hz 화면에서는 같은 상태를 두 번 그리게 된다.
+ * 직전 스텝과 현재 스텝 사이를 alpha 로 섞어 그 저더를 없앤다.
+ */
+export function interpolate(w: World, alpha: number): Snapshot {
+  const a = clamp01(alpha)
+  const p = w.prev
+  const m = w.mochi
+  return {
+    mx: mix(p.mx, m.wx, a),
+    my: mix(p.my, m.wy, a),
+    mz: mix(p.mz, m.wz, a),
+    sx: mix(p.sx, m.sx, a),
+    sy: mix(p.sy, m.sy, a),
+    camX: mix(p.camX, w.camera.px, a),
+    camY: mix(p.camY, w.camera.py, a),
   }
 }
 
@@ -321,6 +363,16 @@ function updateEffects(w: World, dt: number): void {
 }
 
 export function update(w: World, dt: number): void {
+  // 이 스텝을 밟기 전 상태를 남겨 둔다. 렌더가 여기서 저기까지를 보간한다.
+  const p = w.prev
+  p.mx = w.mochi.wx
+  p.my = w.mochi.wy
+  p.mz = w.mochi.wz
+  p.sx = w.mochi.sx
+  p.sy = w.mochi.sy
+  p.camX = w.camera.px
+  p.camY = w.camera.py
+
   w.clock += dt
 
   switch (w.phase) {
