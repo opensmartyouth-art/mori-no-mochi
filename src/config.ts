@@ -96,6 +96,11 @@ export const LAND_RECOVER = 0.26
 // ── 실패(낙하) ────────────────────────────────────────────────────
 /** 모서리에서 미끄러지는 거리(unit)와 결과 카드까지의 시간(초). */
 export const FALL_SLIDE = 0.9
+/**
+ * 실패했는데 착지점이 어떤 그루터기 윗면 위일 때, 그 위를 미끄러져 나가는 속도.
+ * 뚫고 지나가면 안 된다 — 원작은 모서리에서 미끄러져 떨어진다(GDD §6).
+ */
+export const SLIDE_SPEED = 2.6
 export const FALL_TIME = 1.05
 export const FALL_GRAVITY = 30
 

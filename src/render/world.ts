@@ -69,7 +69,8 @@ function drawMochi(
     : 0
 
   // 발밑 그림자. 공중에서는 지면으로 떨어뜨리고 높이만큼 옅고 작게.
-  const standZ = w.phase === 'flying' || w.phase === 'falling' ? 0 : v.mz
+  // 그루터기 위에 서 있거나 미끄러지는 중이면 그 윗면에 붙는다.
+  const standZ = w.ground ? w.ground.h : 0
   const lift = Math.max(0, v.mz - standZ)
   const ground = project(v.mx, v.my, standZ)
   const k = clamp01(1 - lift / 2.2)
@@ -104,11 +105,12 @@ export function drawWorld(
     kind: 'stump' as const,
     i,
   }))
-  // 서 있을 때는 자기 그루터기 깊이를 쓴다. 중심을 조금 지나쳐 착지하면
-  // 모찌의 평면 깊이가 그루터기보다 커져서 그루터기 뒤로 그려져 버린다.
-  const airborne = w.phase === 'flying' || w.phase === 'falling'
-  const cur = current(w)
-  const mochiDepth = airborne ? depth(v.mx, v.my) : depth(cur.wx, cur.wy)
+  // 그루터기 위에 있을 때는 그 그루터기의 깊이를 쓴다. 중심을 조금 지나쳐
+  // 올라서면 모찌의 평면 깊이가 더 커져 발판 뒤로 그려져 버린다.
+  // 실패 후 윗면을 미끄러지는 동안에도 마찬가지다.
+  const mochiDepth = w.ground
+    ? depth(w.ground.wx, w.ground.wy)
+    : depth(v.mx, v.my)
   items.push({ d: mochiDepth - 1e-3, kind: 'mochi' })
   items.sort((a, b) => b.d - a.d)
 

@@ -26,6 +26,7 @@ import {
   SHAKE_OK,
   SHAKE_PERFECT,
   SHAKE_TIME,
+  SLIDE_SPEED,
   SQUASH_MAX,
   STUMP_HEIGHTS,
   STUMP_RADII,
@@ -94,6 +95,12 @@ export interface World {
   fall: { vx: number; vy: number; vz: number }
   dust: Dust[]
   shake: { t: number; mag: number }
+  /**
+   * 모찌가 지금 올라서 있는 그루터기. 서 있을 때와, 실패 후 윗면을
+   * 미끄러지는 동안 채워진다. 공중이면 null.
+   * 렌더는 이걸로 깊이를 잡는다 — 자기 발판 뒤로 그려지면 안 된다.
+   */
+  ground: Stump | null
   /** 직전 물리 스텝의 값. 렌더가 두 스텝 사이를 보간한다. */
   prev: Snapshot
 }
@@ -144,6 +151,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     fall: { vx: 0, vy: 0, vz: 0 },
     dust: [],
     shake: { t: SHAKE_TIME, mag: 0 },
+    ground: first,
     prev: {
       mx: first.wx,
       my: first.wy,
@@ -176,6 +184,29 @@ export function interpolate(w: World, alpha: number): Snapshot {
 }
 
 export const current = (w: World): Stump => w.stumps[w.curIdx]!
+
+/** 이 평면 좌표를 윗면 안에 품는 그루터기. 없으면 undefined. */
+function stumpUnder(w: World, x: number, y: number): Stump | undefined {
+  for (const s of w.stumps) {
+    if (Math.hypot(x - s.wx, y - s.wy) <= s.r) return s
+  }
+  return undefined
+}
+
+/** 그루터기 중심에서 바깥으로 향하는 단위벡터. 정중앙이면 진행 방향을 쓴다. */
+function outward(
+  x: number,
+  y: number,
+  s: Stump,
+  fallbackX: number,
+  fallbackY: number,
+): { x: number; y: number } {
+  const dx = x - s.wx
+  const dy = y - s.wy
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-4) return { x: fallbackX, y: fallbackY }
+  return { x: dx / len, y: dy / len }
+}
 export const target = (w: World): Stump | undefined => w.stumps[w.curIdx + 1]
 
 export function press(w: World): void {
@@ -214,6 +245,7 @@ export function release(w: World): void {
   w.tau = 0
   w.phase = 'flying'
   w.charge = 0
+  w.ground = null
 }
 
 function land(w: World): void {
@@ -226,13 +258,25 @@ function land(w: World): void {
   if (res.verdict === 'miss') {
     // 모서리를 스치고 미끄러지듯 떨어진다. 점프 포물선을 그대로 이어가면
     // 원래 중력이 너무 세서 순식간에 사라진다 — 낙하는 별도 중력으로 돈다.
-    const vh = (p.dist / p.airTime) * FALL_SLIDE
     w.mochi.wx = pos.wx
     w.mochi.wy = pos.wy
-    w.mochi.wz = tgt.h
-    w.fall = { vx: p.dirX * vh, vy: p.dirY * vh, vz: 0 }
+
+    // 빗나갔어도 발밑에 그루터기가 있으면 뚫고 지나가면 안 된다.
+    // 그 위에 올라섰다가 모서리로 미끄러져 떨어진다(GDD §6).
+    const under = stumpUnder(w, pos.wx, pos.wy)
+    if (under) {
+      const out = outward(pos.wx, pos.wy, under, p.dirX, p.dirY)
+      w.mochi.wz = under.h
+      w.ground = under
+      w.fall = { vx: out.x * SLIDE_SPEED, vy: out.y * SLIDE_SPEED, vz: 0 }
+      puff(w, pos.wx, pos.wy, under.h, 0.8)
+    } else {
+      const vh = (p.dist / p.airTime) * FALL_SLIDE
+      w.mochi.wz = tgt.h
+      w.ground = null
+      w.fall = { vx: p.dirX * vh, vy: p.dirY * vh, vz: 0 }
+    }
     kick(w, SHAKE_MISS)
-    puff(w, pos.wx, pos.wy, tgt.h, 0.8)
     w.phase = 'falling'
     w.overT = 0
     return
@@ -241,6 +285,7 @@ function land(w: World): void {
   w.mochi.wx = pos.wx
   w.mochi.wy = pos.wy
   w.mochi.wz = tgt.h
+  w.ground = tgt
   w.curIdx += 1
   w.score = applyLanding(w.score, res.verdict)
   w.landT = 0
@@ -398,10 +443,33 @@ export function update(w: World, dt: number): void {
     case 'falling': {
       w.overT += dt
       const f = w.fall
-      f.vz -= FALL_GRAVITY * dt
-      w.mochi.wx += f.vx * dt
-      w.mochi.wy += f.vy * dt
-      w.mochi.wz += f.vz * dt
+      const m = w.mochi
+      m.wx += f.vx * dt
+      m.wy += f.vy * dt
+
+      if (w.ground) {
+        // 윗면 위를 미끄러지는 중 — 모서리를 넘어서야 떨어지기 시작한다
+        const g = w.ground
+        m.wz = g.h
+        if (Math.hypot(m.wx - g.wx, m.wy - g.wy) > g.r) w.ground = null
+      } else {
+        const beforeZ = m.wz
+        f.vz -= FALL_GRAVITY * dt
+        m.wz += f.vz * dt
+        // 떨어지다 다른 그루터기 윗면을 지나면 거기에 걸쳤다가 미끄러진다
+        if (f.vz < 0) {
+          const s = stumpUnder(w, m.wx, m.wy)
+          if (s && beforeZ >= s.h && m.wz < s.h) {
+            const out = outward(m.wx, m.wy, s, Math.sign(f.vx) || 1, Math.sign(f.vy) || 0)
+            w.ground = s
+            m.wz = s.h
+            f.vx = out.x * SLIDE_SPEED
+            f.vy = out.y * SLIDE_SPEED
+            f.vz = 0
+            puff(w, m.wx, m.wy, s.h, 0.5)
+          }
+        }
+      }
       if (w.overT >= FALL_TIME) w.phase = 'over'
       break
     }

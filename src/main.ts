@@ -66,21 +66,45 @@ function onPress(x: number, y: number): void {
   press(world)
 }
 
+/**
+ * 차지를 시작한 입력이 누구인지 기억한다.
+ *
+ * window 의 pointerup 을 무조건 release 로 받으면, 차지 중에 두 번째 손가락을
+ * 올렸다 떼는 것만으로 덜 찬 점프가 발사된다. 폰에서는 충분히 일어나는 사고고,
+ * 그 한 번으로 판이 끝난다. 차지를 시작한 포인터의 뗌만 받는다.
+ */
+let owner: { kind: 'pointer'; id: number } | { kind: 'key' } | null = null
+
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault()
+  if (owner) return
   const p = stage.toDesign(e.clientX, e.clientY)
   onPress(p.x, p.y)
+  if (world.phase === 'charging') owner = { kind: 'pointer', id: e.pointerId }
 })
+
+const endPointer = (e: PointerEvent, cancel: boolean): void => {
+  if (owner && (owner.kind !== 'pointer' || owner.id !== e.pointerId)) return
+  owner = null
+  if (cancel) cancelCharge(world)
+  else release(world)
+}
+
 window.addEventListener('pointerup', (e) => {
   e.preventDefault()
-  release(world)
+  endPointer(e, false)
 })
 // 포인터가 중간에 빼앗기거나(스크롤 제스처, 전화) 창이 포커스를 잃으면
 // 점프시키지 않고 차지만 버린다. 돌아와서 떼는 순간 최대 점프가 나가면 안 된다.
-window.addEventListener('pointercancel', () => cancelCharge(world))
-window.addEventListener('blur', () => cancelCharge(world))
+window.addEventListener('pointercancel', (e) => endPointer(e, true))
+window.addEventListener('blur', () => {
+  owner = null
+  cancelCharge(world)
+})
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') cancelCharge(world)
+  if (document.visibilityState !== 'hidden') return
+  owner = null
+  cancelCharge(world)
 })
 
 // 데스크톱에서 손맛을 보려면 스페이스가 편하다. 입력 자체는 똑같이 하나다.
@@ -91,11 +115,15 @@ window.addEventListener('keydown', (e) => {
     if (world.overT > 0.45) restart()
     return
   }
+  if (owner) return
   onPress(0, 0)
+  if (world.phase === 'charging') owner = { kind: 'key' }
 })
 window.addEventListener('keyup', (e) => {
   if (e.code !== 'Space') return
   e.preventDefault()
+  if (owner && owner.kind !== 'key') return
+  owner = null
   release(world)
 })
 
