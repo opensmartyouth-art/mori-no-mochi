@@ -278,6 +278,10 @@ export function update(w: World, dt: number): void {
       break
     }
 
+    case 'over':
+      w.overT += dt
+      break
+
     default:
       break
   }
