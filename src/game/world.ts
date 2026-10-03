@@ -470,7 +470,13 @@ export function update(w: World, dt: number): void {
           }
         }
       }
-      if (w.overT >= FALL_TIME) w.phase = 'over'
+      if (w.overT >= FALL_TIME) {
+        // overT 는 여기서부터 '결과 카드가 뜬 뒤 흐른 시간' 으로 역할이 바뀐다.
+        // 리셋하지 않으면 카드가 등장 연출 없이 완성된 채 튀어나오고,
+        // main.ts 의 오탭 방지 0.45초 가드도 한 프레임도 작동하지 않는다.
+        w.phase = 'over'
+        w.overT = 0
+      }
       break
     }
 

@@ -40,8 +40,11 @@ export async function shareResult(w: World): Promise<void> {
     try {
       await navigator.share({ files: [file], text })
       return
-    } catch {
-      // 사용자가 취소했거나 공유 시트가 거부했다. 내려받기로 넘어간다.
+    } catch (err) {
+      // 취소는 실패가 아니라 명시적 거절이다. 여기서 내려받기로 흘리면
+      // "그만두려고 시트를 닫았는데 파일이 저장되는" 일이 생긴다.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      // 그 밖의 실패(미지원 페이로드, 제스처 소실)만 내려받기로 넘어간다.
     }
   }
 

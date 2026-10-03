@@ -3,7 +3,6 @@ import {
   DESIGN_H,
   DESIGN_W,
   FIXED_DT,
-  LOOKAHEAD,
   MAX_DIST,
   MIN_DIST,
 } from '../src/config'
@@ -102,12 +101,23 @@ describe('무한 진행과 그루터기 회수', () => {
     }
   })
 
-  it('앞쪽 그루터기가 항상 여러 개 보인다', () => {
+  // 기대값을 LOOKAHEAD 로 쓰면 상수를 0 으로 낮춰도 통과한다. 리터럴로 고정한다.
+  it('현재 발판 앞으로 최소 4개가 항상 깔려 있다', () => {
     const w = createWorld(31337)
     for (let i = 0; i < 40; i++) {
-      expect(w.stumps.length - w.curIdx).toBeGreaterThan(LOOKAHEAD)
+      expect(w.stumps.length - w.curIdx - 1).toBeGreaterThanOrEqual(4)
       jump(w)
     }
+  })
+
+  // 배열 길이만 보면 회수가 멈춰도 잡히지 않을 수 있다.
+  // 뒤쪽이 실제로 떨어져 나가는지는 curIdx 가 묶여 있는 것으로 확인한다.
+  it('뒤쪽이 실제로 떨어져 나가 curIdx 가 묶인다', () => {
+    const w = createWorld(555)
+    for (let i = 0; i < 100; i++) jump(w)
+    expect(w.score.stumps).toBe(100)
+    expect(w.curIdx).toBeLessThanOrEqual(14)
+    expect(w.stumps[0]!.index).toBeGreaterThan(80)
   })
 })
 

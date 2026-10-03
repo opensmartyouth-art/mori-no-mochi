@@ -1,5 +1,6 @@
 import {
   DUST_TIME,
+  PERFECT_R_RATIO,
   MOCHI_RX,
   MOCHI_RY,
   RING_MAX_SCALE,
@@ -71,7 +72,9 @@ function drawMochi(
   // 발밑 그림자. 공중에서는 지면으로 떨어뜨리고 높이만큼 옅고 작게.
   // 그루터기 위에 서 있거나 미끄러지는 중이면 그 윗면에 붙는다.
   const standZ = w.ground ? w.ground.h : 0
-  const lift = Math.max(0, v.mz - standZ)
+  // 지면 아래로 떨어진 뒤에도 거리로 재야 한다. Math.max(0, ...) 를 쓰면
+  // z 가 음수가 되는 순간 lift 가 0 이 되어 그림자가 최대 크기로 되살아난다.
+  const lift = Math.abs(v.mz - standZ)
   const ground = project(v.mx, v.my, standZ)
   const k = clamp01(1 - lift / 2.2)
   blitShadow(
@@ -149,7 +152,7 @@ export function drawDebugWorld(
   ctx.save()
   ctx.translate(v.camX + sh.x, v.camY + sh.y)
   const p = project(tgt.wx, tgt.wy, tgt.h)
-  const e = isoEllipse(tgt.r * 0.28)
+  const e = isoEllipse(tgt.r * PERFECT_R_RATIO)
   ctx.strokeStyle = 'rgba(120, 255, 140, 0.9)'
   ctx.lineWidth = 1
   ctx.beginPath()

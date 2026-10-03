@@ -22,11 +22,18 @@ const TAU = Math.PI * 2
  * 그루터기 스프라이트와 같은 이유로 기기 픽셀에 맞춰 굽는다.
  * 디자인 해상도로 구우면 고DPI 기기에서 풀 가닥이 뭉개진다.
  */
-let pattern: CanvasPattern | null = null
-let builtScale = 0
+/**
+ * 구운 타일은 스케일별로 들고 있는다. 공유 이미지는 스테이지와 다른 스케일로
+ * 그리는데, 슬롯이 하나뿐이면 공유를 누를 때마다 타일을 두 번 다시 굽는다.
+ * (한 번은 공유용으로, 돌아와서 한 번은 화면용으로)
+ */
+const tiles = new Map<number, HTMLCanvasElement>()
+let bound: { ctx: CanvasRenderingContext2D; scale: number; pattern: CanvasPattern } | null = null
 
-function buildTile(ctx: CanvasRenderingContext2D, scale: number): CanvasPattern {
+function buildTile(scale: number): HTMLCanvasElement {
   const size = GROUND_TILE
+  const cached = tiles.get(scale)
+  if (cached) return cached
   const off = document.createElement('canvas')
   off.width = Math.ceil(size * scale)
   off.height = Math.ceil(size * scale)
@@ -101,9 +108,19 @@ function buildTile(ctx: CanvasRenderingContext2D, scale: number): CanvasPattern 
   }
   g.globalAlpha = 1
 
-  const pat = ctx.createPattern(off, 'repeat')!
+  tiles.set(scale, off)
+  return off
+}
+
+function patternFor(
+  ctx: CanvasRenderingContext2D,
+  scale: number,
+): CanvasPattern {
+  if (bound && bound.ctx === ctx && bound.scale === scale) return bound.pattern
+  const pat = ctx.createPattern(buildTile(scale), 'repeat')!
   // 패턴은 캔버스의 실제 픽셀 크기로 깔리므로 디자인 단위로 되돌린다.
   pat.setTransform?.(new DOMMatrix([1 / scale, 0, 0, 1 / scale, 0, 0]))
+  bound = { ctx, scale, pattern: pat }
   return pat
 }
 
@@ -116,10 +133,7 @@ export function drawGround(
   scale = 1,
 ): void {
   const q = Math.max(0.5, Math.round(scale * 2) / 2)
-  if (!pattern || builtScale !== q) {
-    pattern = buildTile(ctx, q)
-    builtScale = q
-  }
+  const pattern = patternFor(ctx, q)
   ctx.save()
   const ox = ((panX % GROUND_TILE) + GROUND_TILE) % GROUND_TILE
   const oy = ((panY % GROUND_TILE) + GROUND_TILE) % GROUND_TILE

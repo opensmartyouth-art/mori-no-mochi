@@ -47,10 +47,13 @@ function restart(): void {
 
 function onPress(x: number, y: number): void {
   if (screen === 'title') {
-    // 타이틀에서 누르는 그 입력이 그대로 첫 차지가 된다.
+    // 화면만 바꾸고 차지는 시작하지 않는다.
+    // 시작 탭을 그대로 첫 차지로 쓰면, 톡 치고 마는 짧은 탭(60~120ms)이
+    // 차지 거의 0 인 점프가 되어 첫 그루터기(2.3~3.2)에 수학적으로 닿지 못한다.
+    // 실측하면 0ms 탭은 100%, 100ms 탭도 절반이 그 자리에서 판이 끝났다.
+    // 타이틀 안내가 이미 "꾹 눌렀다가 떼면 점프" 이므로 두 번째 입력부터 차지하는 게 맞다.
     screen = 'play'
     screenT = 0
-    press(world)
     return
   }
   if (world.phase === 'over') {
@@ -147,17 +150,19 @@ startLoop(
     const sh = shakeOffset(world)
     // 바닥은 레터박스까지 칠한다. 비율이 다른 창에서 경계가 보이면 안 된다.
     drawGround(ctx, v.camX + sh.x, v.camY + sh.y, stage.bleed, stage.scale)
-    stage.clipDesign()
+    // 월드도 레터박스까지 그린다. 바닥만 레터박스를 덮고 월드를 디자인
+    // 사각형에서 자르면, 비율이 다른 창에서 그루터기가 화면 안쪽 직선에
+    // 썰려 보인다. 잘린 단면이 보이는 것보다 이어지는 쪽이 낫다.
     drawWorld(ctx, world, v)
     if (DEBUG) drawDebugWorld(ctx, world, v)
-    stage.unclip()
     drawVignette(ctx, stage.bleed)
 
     if (screen === 'title') {
       drawRecords(ctx, stage.safe)
       drawTitle(ctx, screenT, stage.safe)
     }
-    else if (world.phase === 'over') drawResult(ctx, world, world.overT)
+    else if (world.phase === 'over')
+      drawResult(ctx, world, world.overT, { scrim: stage.bleed })
     else drawHud(ctx, world, stage.safe)
 
     if (DEBUG) {

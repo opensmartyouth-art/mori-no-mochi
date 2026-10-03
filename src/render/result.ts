@@ -1,4 +1,5 @@
 import {
+  COL_BLUSH,
   COL_GOLD,
   COL_INK,
   COL_MOCHI,
@@ -70,6 +71,12 @@ function mochiFace(ctx: CanvasRenderingContext2D, cx: number, cy: number): void 
   ctx.beginPath()
   ctx.ellipse(cx, cy, 27, 24, 0, 0, Math.PI * 2)
   ctx.fill()
+  // 인게임 모찌와 같은 얼굴이어야 한다. 볼이 빠지면 다른 캐릭터로 보인다.
+  ctx.fillStyle = COL_BLUSH
+  ctx.beginPath()
+  ctx.ellipse(cx - 14, cy + 4, 4.8, 2.8, 0, 0, Math.PI * 2)
+  ctx.ellipse(cx + 14, cy + 4, 4.8, 2.8, 0, 0, Math.PI * 2)
+  ctx.fill()
   ctx.fillStyle = COL_INK
   ctx.beginPath()
   ctx.ellipse(cx - 9, cy - 2, 2.6, 3.4, 0, 0, Math.PI * 2)
@@ -117,6 +124,40 @@ function icoHome(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
 export interface ResultOpts {
   /** 공유 이미지에는 버튼을 넣지 않는다. 받는 사람이 누를 수 없다. */
   buttons?: boolean
+  /**
+   * 배경 암전을 칠할 범위. 바닥과 비네트는 레터박스까지 칠하므로
+   * 암전만 디자인 사각형에서 끊기면 양옆에 밝은 띠가 남는다.
+   */
+  scrim?: { x: number; y: number; w: number; h: number }
+}
+
+/**
+ * 둥근 사각형. ctx.roundRect 는 Safari 16.4 / Chrome 99 미만에 없다.
+ * 가드 없이 쓰면 결과 카드가 통째로 안 그려지고 매 프레임 예외가 난다.
+ */
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  ctx.beginPath()
+  const c = ctx as CanvasRenderingContext2D & {
+    roundRect?: (x: number, y: number, w: number, h: number, r: number) => void
+  }
+  if (typeof c.roundRect === 'function') {
+    c.roundRect(x, y, w, h, r)
+    return
+  }
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.moveTo(x + rr, y)
+  ctx.arcTo(x + w, y, x + w, y + h, rr)
+  ctx.arcTo(x + w, y + h, x, y + h, rr)
+  ctx.arcTo(x, y + h, x, y, rr)
+  ctx.arcTo(x, y, x + w, y, rr)
+  ctx.closePath()
 }
 
 /** 결과 카드(GDD §10). t 는 'over' 가 된 뒤 흐른 시간(초). */
@@ -131,18 +172,19 @@ export function drawResult(
   const best = getBest()
   const s = w.score
 
+  const sc = opts.scrim ?? { x: 0, y: 0, w: DESIGN_W, h: DESIGN_H }
+
   ctx.save()
   ctx.globalAlpha = k
   ctx.fillStyle = 'rgba(28, 33, 18, 0.28)'
-  ctx.fillRect(0, 0, DESIGN_W, DESIGN_H)
+  ctx.fillRect(sc.x, sc.y, sc.w, sc.h)
   ctx.translate(0, mix(26, 0, k))
 
   // 카드보다 먼저 그려서 윗부분만 빼꼼 나오게 한다.
   mochiFace(ctx, DESIGN_W / 2, CARD_Y - 11)
 
   ctx.fillStyle = COL_CARD
-  ctx.beginPath()
-  ctx.roundRect(CARD_X, CARD_Y, CARD_W, CARD_H, 26)
+  roundRectPath(ctx, CARD_X, CARD_Y, CARD_W, CARD_H, 26)
   ctx.fill()
 
   ctx.textBaseline = 'alphabetic'
