@@ -1,65 +1,60 @@
 import { createStage } from './engine/canvas'
 import { startLoop } from './engine/loop'
-import { createRng } from './engine/rng'
 import { DEBUG, drawDebug } from './render/debug'
-import { clearWorld, drawStump, drawStumpShadow } from './render/scene'
-import { createCamera, updateCamera } from './game/camera'
-import { depth } from './game/iso'
-import { CAM_LERP, STUMP_HEIGHTS, STUMP_RADII } from './config'
-import type { Dir, Stump } from './game/types'
+import { clearWorld } from './render/scene'
+import { drawDebugWorld, drawWorld } from './render/world'
+import { createWorld, press, release, update, type World } from './game/world'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
 const stage = createStage(canvas)
 
-// 2단계: 더미 그루터기 5개를 올바른 깊이 순서로 그린다.
-const rng = createRng(7)
-const stumps: Stump[] = [
-  { wx: 0, wy: 0, r: STUMP_RADII[0]!, h: STUMP_HEIGHTS[0]!, index: 0 },
-]
-for (let i = 1; i < 5; i++) {
-  const prev = stumps[i - 1]!
-  // 두 갈래(+x 우상향 / +y 좌상향)가 다 보이도록 지그재그로 고정한다.
-  const dir: Dir = i % 2 === 1 ? 'x' : 'y'
-  const d = rng.range(2.4, 3.4)
-  stumps.push({
-    wx: prev.wx + (dir === 'x' ? d : 0),
-    wy: prev.wy + (dir === 'y' ? d : 0),
-    r: rng.pick(STUMP_RADII),
-    h: rng.pick(STUMP_HEIGHTS),
-    index: i,
-  })
+let world: World = createWorld()
+
+const onDown = (e: Event): void => {
+  e.preventDefault()
+  press(world)
+}
+const onUp = (e: Event): void => {
+  e.preventDefault()
+  release(world)
 }
 
-const camera = createCamera(stumps[0]!)
-let focusIndex = 0
-let clock = 0
+canvas.addEventListener('pointerdown', onDown)
+window.addEventListener('pointerup', onUp)
+window.addEventListener('pointercancel', onUp)
+// 데스크톱에서 손맛을 보려면 스페이스가 편하다. 입력 자체는 하나다.
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !e.repeat) {
+    e.preventDefault()
+    press(world)
+  }
+})
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault()
+    release(world)
+  }
+})
 
 startLoop(
-  (dt) => {
-    clock += dt
-    // 깊이 순서를 눈으로 확인하려고 포커스를 천천히 옮긴다.
-    focusIndex = Math.floor(clock / 1.6) % stumps.length
-    updateCamera(camera, stumps[focusIndex]!, CAM_LERP, dt)
-  },
+  (dt) => update(world, dt),
   (_alpha, stats) => {
     stage.begin()
     const { ctx } = stage
     clearWorld(ctx)
-
-    ctx.save()
-    ctx.translate(camera.px, camera.py)
-    const sorted = [...stumps].sort(
-      (a, b) => depth(b.wx, b.wy) - depth(a.wx, a.wy),
-    )
-    // 그림자는 자기 그루터기 직전에 그린다. 그래야 가까운 것이 먼 것의
-    // 그림자를 덮어 레이어가 뒤집히지 않는다.
-    for (const s of sorted) {
-      drawStumpShadow(ctx, s)
-      drawStump(ctx, s)
+    drawWorld(ctx, world)
+    if (DEBUG) {
+      drawDebugWorld(ctx, world)
+      drawDebug(
+        ctx,
+        stats,
+        `${world.phase} · ch ${world.charge.toFixed(2)} · 그루터기 ${world.score.stumps} · 콤보 ${world.score.combo}`,
+      )
     }
-    ctx.restore()
-
-    drawDebug(ctx, stats, DEBUG ? `focus ${focusIndex}` : '')
     stage.end()
   },
 )
+
+if (DEBUG) {
+  ;(window as unknown as { __world: () => World }).__world = () => world
+}
