@@ -24,10 +24,14 @@ SCRUB="$TMP/scrub.sh"
 cat > "$SCRUB" <<INNER
 #!/bin/sh
 rm -rf ref
-for f in \$(grep -rl -e '$HANDLE' -e '$DOMAIN' . --include='*.md' 2>/dev/null); do
+# .md 로 한정하면 과거 커밋의 스크립트 자신에 남은 문자열을 못 지운다.
+for f in \$(grep -rlI -e '$HANDLE' -e '$DOMAIN' . 2>/dev/null); do
+  # 1) GDD 의 원작 출처 줄을 통째로 바꾼다
   perl -pi -e 's{^- 원작: Threads.*\$}{- 원작: Threads 에 올라온 개인 제작 게임 (32초 플레이 영상).\n  공개 저장소에서는 원작자 보호를 위해 링크와 영상을 제외했다.}' "\$f"
-  perl -pi -e 's{https://www\\.$DOMAIN/\\S*}{(링크 제외)}g' "\$f"
-  perl -pi -e 's{\\@$HANDLE}{(원작자)}g' "\$f"
+  # 2) 남은 링크·핸들·도메인을 모두 지운다. @ 가 붙지 않은 경우까지 포함한다
+  perl -pi -e 's{https?://\\S*$DOMAIN\\S*}{(링크 제외)}g' "\$f"
+  perl -pi -e 's{\\@?$HANDLE}{(원작자)}g' "\$f"
+  perl -pi -e 's{$DOMAIN}{(링크 제외)}g' "\$f"
 done
 exit 0
 INNER
