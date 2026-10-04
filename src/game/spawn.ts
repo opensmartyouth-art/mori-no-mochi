@@ -1,7 +1,9 @@
 import {
+  DIST_RAMP_END,
   EASY_COUNT,
   GEN_MAX_DIST,
   GEN_MIN_DIST,
+  RADIUS_RAMP_START,
   RAMP_COUNT,
   SMALL_RADIUS_CHANCE,
   START_MAX_DIST,
@@ -13,10 +15,22 @@ import type { Rng } from '../engine/rng'
 import { clamp01, mix } from '../engine/ease'
 import type { Dir, Stump } from './types'
 
-/** 0(초반) → 1(최대). 초반 EASY_COUNT 개는 0 으로 고정한다. */
-export function difficulty(count: number): number {
+/**
+ * 거리 확대 진행도 0 → 1. EASY_COUNT 까지 0, DIST_RAMP_END 에서 1.
+ * 먼저 오르는 축이다 — 목표 차지 시간이 넓어지며 조작을 익히게 한다.
+ */
+export function distanceCurve(count: number): number {
   if (count <= EASY_COUNT) return 0
-  return clamp01((count - EASY_COUNT) / (RAMP_COUNT - EASY_COUNT))
+  return clamp01((count - EASY_COUNT) / (DIST_RAMP_END - EASY_COUNT))
+}
+
+/**
+ * 반지름 축소 진행도 0 → 1. RADIUS_RAMP_START 부터 RAMP_COUNT 까지.
+ * 나중에 오르는 축이다 — 허용 오차를 좁혀 숙련을 요구한다.
+ */
+export function radiusCurve(count: number): number {
+  if (count <= RADIUS_RAMP_START) return 0
+  return clamp01((count - RADIUS_RAMP_START) / (RAMP_COUNT - RADIUS_RAMP_START))
 }
 
 /**
@@ -30,15 +44,16 @@ export function spawnNext(
   rng: Rng,
   index: number,
 ): Stump {
-  const d0 = difficulty(index)
-  const lo = mix(START_MIN_DIST, GEN_MIN_DIST, d0)
-  const hi = mix(START_MAX_DIST, GEN_MAX_DIST, d0)
+  const dc = distanceCurve(index)
+  const rc = radiusCurve(index)
+  const lo = mix(START_MIN_DIST, GEN_MIN_DIST, dc)
+  const hi = mix(START_MAX_DIST, GEN_MAX_DIST, dc)
   const dist = rng.range(lo, hi)
   const dir: Dir = rng.chance(0.5) ? 'x' : 'y'
 
-  const small = rng.next() < d0 * SMALL_RADIUS_CHANCE
+  const small = rng.next() < rc * SMALL_RADIUS_CHANCE
   const r = small
-    ? rng.chance(d0)
+    ? rng.chance(rc)
       ? STUMP_RADII[2]!
       : STUMP_RADII[1]!
     : STUMP_RADII[0]!

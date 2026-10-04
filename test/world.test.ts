@@ -18,7 +18,7 @@ import {
   update,
   type World,
 } from '../src/game/world'
-import { difficulty } from '../src/game/spawn'
+import { distanceCurve, radiusCurve } from '../src/game/spawn'
 
 /** 다음 그루터기 중심까지의 거리. */
 function required(w: World): number {
@@ -144,13 +144,31 @@ describe('카메라', () => {
 })
 
 describe('난이도 커브', () => {
-  it('초반 10개는 난이도 0, 이후 완만하게 오른다', () => {
-    expect(difficulty(0)).toBe(0)
-    expect(difficulty(10)).toBe(0)
-    expect(difficulty(11)).toBeGreaterThan(0)
-    expect(difficulty(27)).toBeGreaterThan(difficulty(20))
-    expect(difficulty(45)).toBe(1)
-    expect(difficulty(200)).toBe(1)
+  // 난이도 축은 둘이고, 거리가 먼저 오르고 반지름이 나중에 좁아진다.
+  it('초반 3개만 완전히 쉽고, 거리부터 오른다', () => {
+    expect(distanceCurve(0)).toBe(0)
+    expect(distanceCurve(3)).toBe(0)
+    expect(distanceCurve(4)).toBeGreaterThan(0)
+    expect(distanceCurve(20)).toBe(1)
+    expect(distanceCurve(200)).toBe(1)
+  })
+
+  it('반지름은 거리보다 늦게 좁아지기 시작한다', () => {
+    expect(radiusCurve(3)).toBe(0)
+    expect(radiusCurve(12)).toBe(0)
+    expect(radiusCurve(13)).toBeGreaterThan(0)
+    expect(radiusCurve(45)).toBe(1)
+    expect(radiusCurve(200)).toBe(1)
+  })
+
+  it('거리가 먼저 올라간 뒤에야 반지름이 움직인다', () => {
+    // 거리 확대가 절반 넘게 진행된 시점에도 반지름은 아직 그대로다
+    expect(distanceCurve(12)).toBeGreaterThan(0.5)
+    expect(radiusCurve(12)).toBe(0)
+    // 두 축이 겹치는 구간이 있어야 후반이 한 번에 어려워지지 않는다
+    expect(distanceCurve(16)).toBeGreaterThan(0)
+    expect(distanceCurve(16)).toBeLessThan(1)
+    expect(radiusCurve(16)).toBeGreaterThan(0)
   })
 
   it('뒤로 갈수록 평균 거리가 늘고 반지름이 준다', () => {

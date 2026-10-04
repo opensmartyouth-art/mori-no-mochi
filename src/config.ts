@@ -49,8 +49,21 @@ export const START_MIN_DIST = 2.3
 export const START_MAX_DIST = 3.2
 /** 앞쪽으로 미리 만들어 두는 그루터기 수. 원작처럼 길이 보여야 한다. */
 export const LOOKAHEAD = 4
-/** 이 개수까지는 난이도 고정, 이후 RAMP_COUNT 까지 선형으로 올린다. */
-export const EASY_COUNT = 10
+/**
+ * 난이도 축을 둘로 나눴다. 거리 확대와 반지름 축소는 둘 다 정밀함을 요구하지만
+ * 플레이어에게 주는 과제가 다르다. 거리는 "목표 차지 시간" 을 바꾸고,
+ * 반지름은 "허용 오차" 를 좁힌다. 거리를 먼저 올려 조작을 익히게 한 뒤
+ * 반지름을 줄여 숙련을 요구한다.
+ *
+ * 처음엔 10개를 같은 난이도로 뒀는데, 30초짜리 판에서 3분의 1이 연습 구간이 된다.
+ */
+/** 이 개수까지는 완전히 쉽다. 조작만 익히는 구간. */
+export const EASY_COUNT = 3
+/** 거리 확대가 끝나는 지점. */
+export const DIST_RAMP_END = 20
+/** 반지름 축소가 시작되는 지점. 거리 확대와 겹치게 둔다. */
+export const RADIUS_RAMP_START = 12
+/** 전체 난이도가 최대가 되는 지점. */
 export const RAMP_COUNT = 45
 /** 난이도 0 → 1 에 따라 작은 반지름이 뽑힐 확률. */
 export const SMALL_RADIUS_CHANCE = 0.75
