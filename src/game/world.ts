@@ -295,6 +295,8 @@ function land(w: World): void {
       w.fall = { vx: p.dirX * vh, vy: p.dirY * vh, vz: 0 }
     }
     kick(w, SHAKE_MISS)
+    // 직전 퍼펙트 라벨을 지우지 않으면 눈금과 같은 자리에 겹친다.
+    w.label = null
     w.hint = makeHint(w, pos.wx, pos.wy, tgt)
     w.phase = 'falling'
     w.overT = 0

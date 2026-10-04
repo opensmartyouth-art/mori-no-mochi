@@ -1,15 +1,19 @@
 import {
   COL_GOLD,
   HINT_DOT,
+  HINT_HOLD,
+  HINT_RISE,
+  HINT_SPAN,
   HINT_TIME,
   HINT_W,
+  PERFECT_MULT_CAP,
   PERFECT_R_RATIO,
   COL_TEXT,
   DESIGN_W,
   FONT_STACK,
   LABEL_TIME,
 } from '../config'
-import { clamp, clamp01, easeOutCubic, mix } from '../engine/ease'
+import { clamp01, easeOutCubic, mix } from '../engine/ease'
 import { getBest } from '../game/session'
 import type { World } from '../game/world'
 
@@ -62,43 +66,73 @@ function drawAimHint(
 ): void {
   const h = w.hint
   if (!h) return
-  const t = clamp01(h.t / HINT_TIME)
+  const x = clamp01(h.t / HINT_TIME)
+  // 떴다가 **밝기를 유지하다가** 사라진다. 바로 꺼지면 읽을 시간이 없다.
   const alpha =
-    t < 0.12 ? easeOutCubic(t / 0.12) : 1 - easeOutCubic((t - 0.12) / 0.88)
+    x < HINT_RISE
+      ? easeOutCubic(x / HINT_RISE)
+      : x < HINT_HOLD
+        ? 1
+        : 1 - easeOutCubic((x - HINT_HOLD) / (1 - HINT_HOLD))
   if (alpha <= 0.01) return
 
   const cx = DESIGN_W / 2
-  const y = 156 + safe.top
+  const y = 154 + safe.top
   const half = HINT_W / 2
-  // 눈금 반폭 = 그루터기 반지름. 빗나간 착지는 눈금 밖으로 조금 넘어간다.
-  const px = clamp((h.d / h.r) * half, 0, half * 1.18) * (h.long ? 1 : -1)
+  // 반지름이 아니라 고정 거리로 재야 점 위치가 항상 같은 누름 시간 오차를 뜻한다.
+  const perPx = half / HINT_SPAN
+  const edge = Math.min(h.r * perPx, half)
+  const pr = h.r * PERFECT_R_RATIO * perPx
+  const raw = h.d * perPx
+  const over = raw > half
+  const px = Math.min(raw, half) * (h.long ? 1 : -1)
   const tone = h.long ? '255, 206, 130' : '160, 214, 255'
 
   ctx.save()
   ctx.globalAlpha = alpha
-  ctx.lineCap = 'round'
+  ctx.lineCap = 'butt'
 
-  // 그루터기 폭
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+  // 잴 수 있는 전체 범위
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)'
   ctx.lineWidth = 3
   ctx.beginPath()
   ctx.moveTo(cx - half, y)
   ctx.lineTo(cx + half, y)
   ctx.stroke()
 
+  // 이번 그루터기의 폭 — 여기 안이면 살아남는다
+  ctx.strokeStyle = 'rgba(255,255,255,0.38)'
+  ctx.beginPath()
+  ctx.moveTo(cx - edge, y)
+  ctx.lineTo(cx + edge, y)
+  ctx.stroke()
+
   // 퍼펙트 구간
-  const pr = half * PERFECT_R_RATIO
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'
   ctx.beginPath()
   ctx.moveTo(cx - pr, y)
   ctx.lineTo(cx + pr, y)
   ctx.stroke()
 
-  // 내가 내린 자리
+  // 내가 내린 자리. 눈금 밖으로 벗어났으면 삼각형으로 '더 멀리' 를 알린다
   ctx.fillStyle = `rgba(${tone}, 1)`
   ctx.beginPath()
-  ctx.arc(cx + px, y, HINT_DOT, 0, Math.PI * 2)
+  if (over) {
+    const s = h.long ? 1 : -1
+    ctx.moveTo(cx + px + s * 5, y)
+    ctx.lineTo(cx + px - s * 3, y - 4)
+    ctx.lineTo(cx + px - s * 3, y + 4)
+    ctx.closePath()
+  } else {
+    ctx.arc(cx + px, y, HINT_DOT, 0, Math.PI * 2)
+  }
   ctx.fill()
+
+  // 좌우가 무슨 뜻인지는 설명되지 않는다. 글자로 못박는다.
+  ctx.textAlign = 'center'
+  ctx.font = `700 11px ${FONT_STACK}`
+  ctx.fillStyle = `rgba(${tone}, 0.95)`
+  ctx.fillText(h.long ? '길었다' : '짧았다', cx, y + 18)
 
   ctx.globalAlpha = 1
   ctx.restore()
@@ -135,9 +169,11 @@ export function drawHud(
       ctx.font = `800 19px ${FONT_STACK}`
       ctx.fillText('Perfect', DESIGN_W / 2, y)
     } else {
+      // 원작은 ×N 이 곧 점수 배수였다. 상한을 둔 뒤로는 둘이 갈라지므로
+      // ×N 으로 쓰면 숫자가 실제 점수를 속이게 된다. 연속 기록으로 적는다.
       ctx.font = `800 19px ${FONT_STACK}`
       const main = 'Perfect '
-      const sub = `×${n}`
+      const sub = n > PERFECT_MULT_CAP ? `${n}연속` : `×${n}`
       const mw = ctx.measureText(main).width
       ctx.font = `700 13px ${FONT_STACK}`
       const sw = ctx.measureText(sub).width

@@ -5,6 +5,7 @@ import {
   GEN_MIN_DIST,
   RADIUS_RAMP_START,
   RAMP_COUNT,
+  SMALLEST_BIAS,
   SMALL_RADIUS_CHANCE,
   START_MAX_DIST,
   START_MIN_DIST,
@@ -53,7 +54,7 @@ export function spawnNext(
 
   const small = rng.next() < rc * SMALL_RADIUS_CHANCE
   const r = small
-    ? rng.chance(rc)
+    ? rng.chance(rc * SMALLEST_BIAS)
       ? STUMP_RADII[2]!
       : STUMP_RADII[1]!
     : STUMP_RADII[0]!
