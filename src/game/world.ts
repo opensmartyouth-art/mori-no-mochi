@@ -2,6 +2,7 @@ import {
   CAM_LERP,
   CAM_LERP_AIR,
   CHARGE_TIME,
+  CONTINUE_MAX,
   CULL_MARGIN,
   DESIGN_H,
   DUST_COUNT,
@@ -19,6 +20,7 @@ import {
   LOOKAHEAD,
   LAND_RECOVER,
   LAND_SQUASH,
+  OFFER_DELAY,
   MAX_DIST,
   MIN_DIST,
   HINT_TIME,
@@ -42,7 +44,17 @@ import { applyLanding, createScore, type ScoreState } from './score'
 import { spawnNext } from './spawn'
 import type { Judgement, Stump } from './types'
 
-export type Phase = 'idle' | 'charging' | 'flying' | 'falling' | 'over'
+/**
+ * 'offer' 는 떨어진 뒤 "광고 보고 이어하기" 를 묻는 상태다.
+ * 낙하 → offer → (이어하기) idle / (그만두기) over
+ */
+export type Phase =
+  | 'idle'
+  | 'charging'
+  | 'flying'
+  | 'falling'
+  | 'offer'
+  | 'over'
 
 export interface Ring {
   wx: number
@@ -109,6 +121,8 @@ export interface World {
   clock: number
   /** 낙하 중 속도(unit/s). 실패했을 때만 쓴다. */
   fall: { vx: number; vy: number; vz: number }
+  /** 이 판에서 이어하기를 쓴 횟수. */
+  continues: number
   dust: Dust[]
   shake: { t: number; mag: number }
   /**
@@ -166,6 +180,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     overT: 0,
     clock: 0,
     fall: { vx: 0, vy: 0, vz: 0 },
+    continues: 0,
     dust: [],
     shake: { t: SHAKE_TIME, mag: 0 },
     ground: first,
@@ -238,6 +253,49 @@ export function press(w: World): void {
  * 그 사이 차지는 상한까지 차 있고, 돌아와 손을 떼는 순간 최대 점프가 나가
  * 그대로 죽는다. 그럴 바엔 차지를 버리는 쪽이 낫다.
  */
+/**
+ * 광고를 끝까지 본 뒤 되살린다. 떨어지기 직전 서 있던 그루터기로 돌아간다.
+ * 목숨을 하나 더 주는 게 아니라 "방금 그 점프를 무르는" 쪽에 가깝다.
+ *
+ * 퍼펙트 연속은 끊는다. 떨어졌는데 연속이 이어지면 기록이 거짓이 된다.
+ * (applyLanding 은 miss 를 그냥 무시하므로 여기서 직접 끊어야 한다)
+ */
+export function revive(w: World): void {
+  if (w.phase !== 'offer' || w.continues >= CONTINUE_MAX) return
+  const cur = current(w)
+  w.continues += 1
+  w.mochi.wx = cur.wx
+  w.mochi.wy = cur.wy
+  w.mochi.wz = cur.h
+  w.mochi.sx = 1
+  w.mochi.sy = 1
+  w.ground = cur
+  w.fall = { vx: 0, vy: 0, vz: 0 }
+  w.plan = null
+  w.charge = 0
+  w.tau = 0
+  w.landT = 0
+  w.lastVerdict = null
+  w.hint = null
+  w.label = null
+  w.score = { ...w.score, combo: 0 }
+  w.overT = 0
+  w.phase = 'idle'
+  // 보간이 되살아난 지점에서 시작하도록 직전 스냅샷도 맞춰 둔다
+  w.prev.mx = cur.wx
+  w.prev.my = cur.wy
+  w.prev.mz = cur.h
+  w.prev.sx = 1
+  w.prev.sy = 1
+}
+
+/** 이어하기를 거절했다. 결과 카드로 간다. */
+export function declineContinue(w: World): void {
+  if (w.phase !== 'offer') return
+  w.phase = 'over'
+  w.overT = 0
+}
+
 export function cancelCharge(w: World): void {
   if (w.phase !== 'charging') return
   w.phase = 'idle'
@@ -513,16 +571,18 @@ export function update(w: World, dt: number): void {
           }
         }
       }
-      if (w.overT >= FALL_TIME) {
-        // overT 는 여기서부터 '결과 카드가 뜬 뒤 흐른 시간' 으로 역할이 바뀐다.
-        // 리셋하지 않으면 카드가 등장 연출 없이 완성된 채 튀어나오고,
+      if (w.overT >= FALL_TIME + OFFER_DELAY) {
+        // overT 는 여기서부터 '화면이 뜬 뒤 흐른 시간' 으로 역할이 바뀐다.
+        // 리셋하지 않으면 등장 연출 없이 완성된 채 튀어나오고,
         // main.ts 의 오탭 방지 0.45초 가드도 한 프레임도 작동하지 않는다.
-        w.phase = 'over'
+        // 이어하기가 남아 있으면 결과 카드 전에 먼저 묻는다.
+        w.phase = w.continues < CONTINUE_MAX ? 'offer' : 'over'
         w.overT = 0
       }
       break
     }
 
+    case 'offer':
     case 'over':
       w.overT += dt
       break

@@ -11,8 +11,10 @@ import { judgeLanding } from '../src/game/judge'
 import {
   cancelCharge,
   createWorld,
+  declineContinue,
   press,
   release,
+  revive,
   target,
   update,
   type World,
@@ -71,19 +73,24 @@ describe('차지', () => {
    * 카드가 FALL_TIME 만큼 지난 상태로 시작해서 등장 연출(0.42s)이 통째로
    * 생략되고, main.ts 의 오탭 방지 0.45초 가드도 한 프레임도 작동하지 않는다.
    */
-  it('결과로 넘어가는 순간 카드 타이머가 0 에서 시작한다', () => {
+  it('결과로 넘어가는 순간 화면 타이머가 0 에서 시작한다', () => {
     const w = createWorld(9)
     press(w)
     w.charge = 1
     release(w)
     let n = 0
-    while (phaseOf(w) !== 'over' && n < 3000) {
+    while (phaseOf(w) !== 'offer' && n < 3000) {
       update(w, FIXED_DT)
       n++
     }
-    expect(phaseOf(w)).toBe('over')
+    // 떨어지면 먼저 이어하기를 묻는다
+    expect(phaseOf(w)).toBe('offer')
     expect(w.lastVerdict).toBe('miss')
     expect(w.overT).toBeLessThan(FIXED_DT * 2)
+    // 거절하면 결과 카드, 그때도 타이머는 0 에서 시작한다
+    declineContinue(w)
+    expect(phaseOf(w)).toBe('over')
+    expect(w.overT).toBe(0)
   })
 
   it('cancelCharge 는 비행 중에는 아무 것도 하지 않는다', () => {
@@ -96,6 +103,124 @@ describe('차지', () => {
     expect(phaseOf(w)).toBe('flying')
     expect(w.mochi.wx).toBe(before.x)
     expect(w.mochi.wz).toBe(before.z)
+  })
+})
+
+/**
+ * 광고 보고 이어하기.
+ * 플랫폼이 게임에 권장하는 수익 모델이지만, 이 게임의 정체성은
+ * "한 번 빗나가면 끝" 이라 기록이 거짓이 되지 않게 지켜야 할 것이 있다.
+ */
+describe('이어하기', () => {
+  const dieOnce = (w: World): void => {
+    press(w)
+    w.charge = 1
+    release(w)
+    let n = 0
+    while (phaseOf(w) !== 'offer' && phaseOf(w) !== 'over' && n < 3000) {
+      update(w, FIXED_DT)
+      n++
+    }
+  }
+
+  it('떨어지면 결과 카드 전에 먼저 묻는다', () => {
+    const w = createWorld(21)
+    dieOnce(w)
+    expect(phaseOf(w)).toBe('offer')
+    expect(w.continues).toBe(0)
+  })
+
+  it('이어하면 떨어지기 직전 발판 한가운데로 돌아간다', () => {
+    const w = createWorld(22)
+    // 한 번 성공해서 curIdx 를 옮긴 뒤 죽는다
+    press(w)
+    w.charge =
+      (Math.hypot(target(w)!.wx - w.mochi.wx, target(w)!.wy - w.mochi.wy) -
+        MIN_DIST) /
+      (MAX_DIST - MIN_DIST)
+    release(w)
+    let n = 0
+    while (phaseOf(w) === 'flying' && n < 500) {
+      update(w, FIXED_DT)
+      n++
+    }
+    const stood = w.stumps[w.curIdx]!
+    const before = w.score.stumps
+    dieOnce(w)
+    revive(w)
+    expect(phaseOf(w)).toBe('idle')
+    expect(w.mochi.wx).toBe(stood.wx)
+    expect(w.mochi.wy).toBe(stood.wy)
+    expect(w.mochi.wz).toBe(stood.h)
+    // 쌓은 그루터기는 그대로 이어진다
+    expect(w.score.stumps).toBe(before)
+    expect(w.continues).toBe(1)
+  })
+
+  it('이어해도 퍼펙트 연속은 끊긴다', () => {
+    const w = createWorld(23)
+    // 퍼펙트로 두 번 올라간 뒤 죽는다
+    for (let i = 0; i < 2; i++) {
+      const t = target(w)!
+      press(w)
+      w.charge =
+        (Math.hypot(t.wx - w.mochi.wx, t.wy - w.mochi.wy) - MIN_DIST) /
+        (MAX_DIST - MIN_DIST)
+      release(w)
+      let n = 0
+      while (phaseOf(w) === 'flying' && n < 500) {
+        update(w, FIXED_DT)
+        n++
+      }
+    }
+    expect(w.score.combo).toBeGreaterThan(0)
+    const best = w.score.bestCombo
+    dieOnce(w)
+    revive(w)
+    // 떨어졌는데 연속이 이어지면 기록이 거짓이 된다
+    expect(w.score.combo).toBe(0)
+    // 이미 세운 최장 기록은 남는다
+    expect(w.score.bestCombo).toBe(best)
+  })
+
+  it('한 판에 한 번만 쓸 수 있고, 그 뒤엔 바로 결과로 간다', () => {
+    const w = createWorld(24)
+    dieOnce(w)
+    revive(w)
+    expect(w.continues).toBe(1)
+    dieOnce(w)
+    // 두 번째 죽음에는 묻지 않는다
+    expect(phaseOf(w)).toBe('over')
+    revive(w)
+    expect(phaseOf(w)).toBe('over')
+    expect(w.continues).toBe(1)
+  })
+
+  it('거절하면 결과로 가고 이어하기 횟수는 그대로다', () => {
+    const w = createWorld(25)
+    dieOnce(w)
+    declineContinue(w)
+    expect(phaseOf(w)).toBe('over')
+    expect(w.continues).toBe(0)
+  })
+
+  it('이어한 뒤 다시 정상으로 뛸 수 있다', () => {
+    const w = createWorld(26)
+    dieOnce(w)
+    revive(w)
+    const t = target(w)!
+    press(w)
+    w.charge =
+      (Math.hypot(t.wx - w.mochi.wx, t.wy - w.mochi.wy) - MIN_DIST) /
+      (MAX_DIST - MIN_DIST)
+    release(w)
+    let n = 0
+    while (phaseOf(w) === 'flying' && n < 500) {
+      update(w, FIXED_DT)
+      n++
+    }
+    expect(phaseOf(w)).toBe('idle')
+    expect(w.lastVerdict).toBe('perfect')
   })
 })
 

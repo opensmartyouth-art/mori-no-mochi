@@ -12,6 +12,7 @@ import { createRng } from '../src/engine/rng'
 import { clamp01 } from '../src/engine/ease'
 import {
   createWorld,
+  declineContinue,
   press,
   release,
   target,
@@ -205,10 +206,13 @@ describe('실패', () => {
     jump(w, 1.4)
     expect(w.lastVerdict).toBe('miss')
     let n = 0
-    while (w.phase !== 'over' && n < 2000) {
+    while (w.phase !== 'offer' && n < 2000) {
       update(w, FIXED_DT)
       n++
     }
+    // 떨어지면 결과 카드 전에 이어하기를 먼저 묻는다
+    expect(w.phase).toBe('offer')
+    declineContinue(w)
     expect(w.phase).toBe('over')
     // 실패한 점프는 점수에 들어가지 않는다
     expect(w.score.stumps).toBe(1)

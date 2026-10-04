@@ -195,6 +195,26 @@ export const SHAKE_OK = 1.5
 export const SHAKE_PERFECT = 2.6
 export const SHAKE_MISS = 3.6
 
+// ── 리워드 광고 / 이어하기 ─────────────────────────────────────────
+/**
+ * 콘솔에서 발급받은 리워드 광고 그룹 ID.
+ * 개발 중에는 문서가 안내하는 테스트 ID 를 쓴다.
+ */
+export const AD_GROUP_ID = 'ait-ad-test-rewarded-id'
+/** SDK 없는 환경에서 광고를 흉내낼 때의 지연(ms). */
+export const AD_MOCK_DELAY = 1200
+/**
+ * 한 판에 허용하는 이어하기 횟수.
+ *
+ * 플랫폼이 게임에 "광고 보고 이어하기" 를 권장하고, 추천 미니앱 선정과
+ * 챌린지 심사가 모두 재방문율을 본다. 다만 이 게임의 정체성은
+ * "한 번 빗나가면 끝" 이라, 무제한으로 열면 기록의 의미가 사라진다.
+ * 판당 1회가 둘 사이의 타협점이다.
+ */
+export const CONTINUE_MAX = 1
+/** 낙하가 끝나고 이어하기를 제안하기까지 기다리는 시간(초). */
+export const OFFER_DELAY = 0.35
+
 // ── 색 ────────────────────────────────────────────────────────────
 // 원작의 강점은 절제다. 색 수를 늘리지 말고 한 계열 안에서 명도만 움직인다.
 export const COL_BG = '#6f7a54'
@@ -219,6 +239,8 @@ export const COL_EYE = '#3a3f2c'
 export const COL_BLUSH = 'rgba(240, 160, 160, 0.45)'
 
 export const COL_INK = '#2f3524'
+/** 카드·버튼 바탕. */
+export const COL_CARD_INK = '#f5efe2'
 export const COL_TEXT = '#ffffff'
 export const COL_GOLD = '#e8c07a'
 

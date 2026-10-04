@@ -6,6 +6,8 @@ import { setSpriteScale } from './render/sprites'
 import { drawDebugWorld, drawWorld } from './render/world'
 import { drawHud, drawRecords } from './render/hud'
 import { drawResult, hitButton } from './render/result'
+import { drawOffer, hitOffer } from './render/offer'
+import { createRewardedAd } from './platform/ads'
 import { drawTitle } from './render/title'
 import { shareResult } from './render/share'
 import { totalScore } from './game/score'
@@ -13,6 +15,8 @@ import { submit } from './game/session'
 import {
   cancelCharge,
   createWorld,
+  declineContinue,
+  revive,
   interpolate,
   press,
   release,
@@ -30,6 +34,28 @@ let world: World = createWorld()
 let screen: Screen = 'title'
 let screenT = 0
 let submitted = false
+
+// 광고는 미리 받아 둔다. 떨어진 뒤에 받기 시작하면 기다리게 된다.
+const ad = createRewardedAd()
+ad.preload()
+/** 광고를 불러오거나 재생하는 중. 이 동안은 입력을 막는다. */
+let adPending = false
+
+async function watchAdAndContinue(): Promise<void> {
+  if (adPending) return
+  adPending = true
+  try {
+    // 보상 조건을 채웠을 때만 되살린다. 중간에 닫으면 결과로 간다.
+    const earned = await ad.show()
+    if (earned) revive(world)
+    else declineContinue(world)
+  } catch {
+    declineContinue(world)
+  } finally {
+    adPending = false
+    ad.preload()
+  }
+}
 
 function toTitle(): void {
   world = createWorld()
@@ -54,6 +80,13 @@ function onPress(x: number, y: number): void {
     // 타이틀 안내가 이미 "꾹 눌렀다가 떼면 점프" 이므로 두 번째 입력부터 차지하는 게 맞다.
     screen = 'play'
     screenT = 0
+    return
+  }
+  if (world.phase === 'offer') {
+    if (adPending || world.overT <= 0.35) return
+    const b = hitOffer(x, y)
+    if (b === 'continue') void watchAdAndContinue()
+    else if (b === 'quit') declineContinue(world)
     return
   }
   if (world.phase === 'over') {
@@ -161,6 +194,11 @@ startLoop(
       drawRecords(ctx, stage.safe)
       drawTitle(ctx, screenT, stage.safe)
     }
+    else if (world.phase === 'offer')
+      drawOffer(ctx, world, world.overT, {
+        scrim: stage.bleed,
+        pending: adPending,
+      })
     else if (world.phase === 'over')
       drawResult(ctx, world, world.overT, { scrim: stage.bleed })
     else drawHud(ctx, world, stage.safe)

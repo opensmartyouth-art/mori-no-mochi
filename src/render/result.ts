@@ -1,5 +1,6 @@
 import {
   COL_BLUSH,
+  COL_CARD_INK,
   COL_GOLD,
   COL_INK,
   COL_MOCHI,
@@ -17,7 +18,7 @@ const CARD_H = 296
 const CARD_X = (DESIGN_W - CARD_W) / 2
 const CARD_Y = 292
 
-const COL_CARD = '#f5efe2'
+
 const COL_MUTED = '#8e8a7c'
 const COL_LINE = 'rgba(47, 53, 36, 0.1)'
 
@@ -66,7 +67,11 @@ function row(
   ctx.fillText(right, CARD_X + CARD_W - 24, y)
 }
 
-function mochiFace(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+export function mochiFace(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+): void {
   ctx.fillStyle = COL_MOCHI
   ctx.beginPath()
   ctx.ellipse(cx, cy, 27, 24, 0, 0, Math.PI * 2)
@@ -135,7 +140,7 @@ export interface ResultOpts {
  * 둥근 사각형. ctx.roundRect 는 Safari 16.4 / Chrome 99 미만에 없다.
  * 가드 없이 쓰면 결과 카드가 통째로 안 그려지고 매 프레임 예외가 난다.
  */
-function roundRectPath(
+export function roundRectPath(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -183,7 +188,7 @@ export function drawResult(
   // 카드보다 먼저 그려서 윗부분만 빼꼼 나오게 한다.
   mochiFace(ctx, DESIGN_W / 2, CARD_Y - 11)
 
-  ctx.fillStyle = COL_CARD
+  ctx.fillStyle = COL_CARD_INK
   roundRectPath(ctx, CARD_X, CARD_Y, CARD_W, CARD_H, 26)
   ctx.fill()
 
@@ -229,7 +234,7 @@ export function drawResult(
   ctx.fillText(`최고 점수 ${best.score}`, CARD_X + CARD_W - 24, CARD_Y + 272)
 
   for (const b of withButtons ? cardButtons() : []) {
-    ctx.fillStyle = COL_CARD
+    ctx.fillStyle = COL_CARD_INK
     ctx.beginPath()
     ctx.arc(b.cx, b.cy, b.r, 0, Math.PI * 2)
     ctx.fill()
