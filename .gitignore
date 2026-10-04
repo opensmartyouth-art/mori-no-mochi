@@ -2,3 +2,5 @@ node_modules/
 dist/
 .DS_Store
 *.local
+
+# 공개 저장소로 올리기: ./scripts/publish.sh
