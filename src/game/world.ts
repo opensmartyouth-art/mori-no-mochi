@@ -21,6 +21,7 @@ import {
   LAND_SQUASH,
   MAX_DIST,
   MIN_DIST,
+  HINT_TIME,
   RING_TIME,
   SHAKE_MISS,
   SHAKE_OK,
@@ -49,6 +50,20 @@ export interface Ring {
   wz: number
   /** 시작 반지름(월드 unit). */
   r: number
+  t: number
+}
+
+/**
+ * 착지 보정 힌트. 중심이 어디였고 어디에 내렸는지를 그루터기 윗면에 표시한다.
+ * 퍼펙트가 아닐 때만 생긴다 — 퍼펙트는 링으로 이미 알려준다.
+ */
+export interface AimHint {
+  /** 중심에서 어긋난 거리(unit). */
+  d: number
+  /** 그 그루터기의 반지름(unit). 눈금의 폭이 된다. */
+  r: number
+  /** 중심보다 멀리 갔으면 true. */
+  long: boolean
   t: number
 }
 
@@ -89,6 +104,7 @@ export interface World {
   camera: Camera
   rings: Ring[]
   label: { combo: number; t: number } | null
+  hint: AimHint | null
   overT: number
   clock: number
   /** 낙하 중 속도(unit/s). 실패했을 때만 쓴다. */
@@ -146,6 +162,7 @@ export function createWorld(seed = (Math.random() * 1e9) | 0): World {
     camera: cam,
     rings: [],
     label: null,
+    hint: null,
     overT: 0,
     clock: 0,
     fall: { vx: 0, vy: 0, vz: 0 },
@@ -246,6 +263,7 @@ export function release(w: World): void {
   w.phase = 'flying'
   w.charge = 0
   w.ground = null
+  w.hint = null
 }
 
 function land(w: World): void {
@@ -277,6 +295,7 @@ function land(w: World): void {
       w.fall = { vx: p.dirX * vh, vy: p.dirY * vh, vz: 0 }
     }
     kick(w, SHAKE_MISS)
+    w.hint = makeHint(w, pos.wx, pos.wy, tgt)
     w.phase = 'falling'
     w.overT = 0
     return
@@ -300,6 +319,7 @@ function land(w: World): void {
   } else {
     w.label = null
     kick(w, SHAKE_OK)
+    w.hint = makeHint(w, pos.wx, pos.wy, tgt)
   }
 
   // 앞쪽으로 항상 LOOKAHEAD 개가 보이도록 채운다. 직전 그루터기 중심 기준.
@@ -359,6 +379,23 @@ function updateVisual(w: World, dt: number): void {
   m.sx = 1 + (1 - landSy) * 0.6
 }
 
+function makeHint(
+  w: World,
+  lx: number,
+  ly: number,
+  tgt: Stump,
+): AimHint {
+  const p = w.plan!
+  // 진행 방향으로 투영해 넘쳤는지 모자랐는지 가린다
+  const along = (lx - tgt.wx) * p.dirX + (ly - tgt.wy) * p.dirY
+  return {
+    d: Math.hypot(lx - tgt.wx, ly - tgt.wy),
+    r: tgt.r,
+    long: along > 0,
+    t: 0,
+  }
+}
+
 function puff(w: World, x: number, y: number, z: number, strength: number): void {
   for (let i = 0; i < DUST_COUNT; i++) {
     const a = w.rng.next() * Math.PI * 2
@@ -404,6 +441,10 @@ function updateEffects(w: World, dt: number): void {
   if (w.label) {
     w.label.t += dt
     if (w.label.t >= LABEL_TIME) w.label = null
+  }
+  if (w.hint) {
+    w.hint.t += dt
+    if (w.hint.t >= HINT_TIME) w.hint = null
   }
 }
 

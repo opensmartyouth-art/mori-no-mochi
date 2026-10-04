@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PERFECT_MULT_CAP } from '../src/config'
 import {
   applyLanding,
   createScore,
@@ -100,20 +101,26 @@ describe('원작 결과 카드 역산', () => {
   })
 
   /**
-   * 배수 상한은 원작 데이터로 역산되지 않아 "무제한"으로 결정했다.
-   * 나중에 상한을 두더라도 그건 의도한 변경이어야 하므로 여기서 고정한다.
+   * 배수 상한은 원작 데이터로 역산되지 않는다. 지금은 시험값 5 다.
+   * 연속 횟수 기록 자체에는 상한이 없고 배수만 멈춘다.
    */
-  it('배수는 상한 없이 연속 횟수를 그대로 따라간다', () => {
+  it('배수는 연속 횟수를 따라가되 상한에서 멈춘다', () => {
     let s = createScore()
     let expected = 0
     for (let k = 1; k <= 20; k++) {
       s = applyLanding(s, 'perfect')
-      expected += 10 * k
+      expected += 10 * Math.min(k, PERFECT_MULT_CAP)
+      // 연속 기록은 상한과 무관하게 계속 올라간다
       expect(s.combo).toBe(k)
+      expect(s.bestCombo).toBe(k)
       expect(s.perfectScore).toBe(expected)
     }
-    // 11연속 한 묶음이면 그 묶음만 660점
-    expect(play(Array<Judgement>(11).fill('perfect')).perfectScore).toBe(660)
+  })
+
+  it('상한이 원작 사례(최장 3연속)에는 닿지 않는다', () => {
+    // 상한을 바꿔도 260점 재현이 깨지면 안 된다
+    expect(PERFECT_MULT_CAP).toBeGreaterThanOrEqual(3)
+    expect(play(RUN).perfectScore).toBe(140)
   })
 
   it('실패는 점수에도 개수에도 들어가지 않는다', () => {
