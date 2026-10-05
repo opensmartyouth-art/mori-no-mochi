@@ -8,7 +8,10 @@
  * 보상은 **`userEarnedReward` 이벤트에서만** 지급한다.
  * `dismissed` 는 '광고가 닫혔다' 일 뿐이라 거기서 주면 끝까지 안 보고도 받는다.
  *
- * SDK 가 없는 환경(로컬 개발, 일반 브라우저)에서는 모의 구현으로 떨어진다.
+ * SDK 가 없을 때:
+ *   - 개발 서버이거나 ?debug=1 이면 모의 구현(1.2초 뒤 성공)으로 떨어진다
+ *   - 그 밖(배포 빌드)에서는 **광고 없음**으로 처리한다
+ * 배포 빌드에서까지 모의로 떨어지면 광고 없이 공짜로 이어하기가 된다.
  * 게임 쪽 코드는 어느 쪽인지 몰라도 되게 인터페이스 하나만 본다.
  */
 import { AD_GROUP_ID, AD_MOCK_DELAY } from '../config'
@@ -101,12 +104,22 @@ function createSdkAd(api: AdApi, adGroupId: string): RewardedAd {
   }
 }
 
+const UNAVAILABLE: RewardedAd = {
+  ready: false,
+  preload: () => {},
+  show: async () => false,
+}
+
+/** 모의 광고를 써도 되는 환경인가. 배포 빌드에서는 절대 켜지면 안 된다. */
+function mockAllowed(): boolean {
+  if (import.meta.env.DEV) return true
+  return new URLSearchParams(location.search).get('debug') === '1'
+}
+
 /** 로컬 개발용. ?ad=fail 이면 실패를, ?ad=none 이면 미지원을 흉내낸다. */
 function createMockAd(): RewardedAd {
   const mode = new URLSearchParams(location.search).get('ad')
-  if (mode === 'none') {
-    return { ready: false, preload: () => {}, show: async () => false }
-  }
+  if (mode === 'none') return UNAVAILABLE
   return {
     ready: true,
     preload: () => {},
@@ -118,7 +131,7 @@ function createMockAd(): RewardedAd {
 }
 
 export function createRewardedAd(): RewardedAd {
-  let inner: RewardedAd = createMockAd()
+  let inner: RewardedAd = mockAllowed() ? createMockAd() : UNAVAILABLE
   void loadSdk().then((api) => {
     if (api) {
       inner = createSdkAd(api, AD_GROUP_ID)

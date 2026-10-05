@@ -168,6 +168,10 @@ startLoop(
     const dt = raw * TIME_SCALE
     screenT += dt
     update(world, dt)
+    // 보여줄 광고가 없으면 묻지 않는다. 눌러도 튕기는 버튼은 두지 않는다.
+    if (world.phase === 'offer' && !adPending && !ad.ready) {
+      declineContinue(world)
+    }
     if (screen === 'play' && world.phase === 'over' && !submitted) {
       submitted = true
       submit(world.score.stumps, world.score.bestCombo, totalScore(world.score))

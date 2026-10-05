@@ -13,8 +13,8 @@
 ```bash
 npm install
 npm run dev      # 개발 서버
-npm test         # 테스트 18개
-npm run build    # 타입체크 + 번들 (gzip 약 9KB)
+npm test         # 테스트 44개
+npm run build    # 타입체크 + 번들 (gzip 약 12KB)
 npm run preview  # 빌드 결과 확인
 ```
 
@@ -26,8 +26,27 @@ npm run preview  # 빌드 결과 확인
 |---|---|
 | `?debug=1` | fps / 렌더 시간 / 상태, 퍼펙트 반경(초록 타원), 목표선, `window.__world()` |
 | `?debug=1&slow=6` | 시간을 6배 느리게. 0.5초 안에 끝나는 연출을 눈으로 보려면 필요하다 |
+| `?debug=1&ad=fail` | 이어하기 광고를 끝까지 안 보고 닫은 경우 |
+| `?debug=1&ad=none` | 광고를 못 불러온 경우 — 이어하기를 묻지 않고 바로 결과로 간다 |
 
 `debug` 없이는 전부 꺼지고 `__world` 도 노출되지 않는다.
+
+### 광고
+
+리워드 광고는 `@apps-in-toss/web-framework` 의 `loadFullScreenAd` / `showFullScreenAd`
+형태에 맞춰 `src/platform/ads.ts` 가 감싼다. **SDK 는 아직 설치하지 않았다.**
+
+- 개발 서버이거나 `?debug=1` 이면 모의 광고(1.2초 뒤 성공)로 돈다
+- 배포 빌드에서 SDK 가 없으면 **광고 없음**으로 처리해 이어하기를 묻지 않는다.
+  모의로 떨어지면 광고 없이 공짜로 이어하기가 되기 때문이다
+- 보상은 `userEarnedReward` 에서만 준다. `dismissed` 에서 주면 안 보고 닫아도 받는다
+
+### 공개 저장소로 올리기
+
+로컬 저장소에는 `ref/`(원작 영상과 추출 프레임)가 있어서 `origin` 을 두지 않았다.
+`git push` 대신 `./scripts/publish.sh` 로 올린다. 매번 사본을 떠 `ref/` 와 원작
+링크·핸들을 히스토리까지 걷어낸 뒤 올리고, 남아 있으면 올리기 전에 멈춘다.
+공개본은 히스토리를 다시 쓰므로 커밋 해시가 매번 바뀐다.
 
 ## 구조
 
@@ -37,7 +56,7 @@ npm run preview  # 빌드 결과 확인
 ```
 src/
   config.ts          튜닝 상수 단일 소스. 숫자를 바꾸려면 여기만 본다
-  main.ts            부팅, 입력, 화면 전환(타이틀 ↔ 플레이 ↔ 결과)
+  main.ts            부팅, 입력 소유권, 화면 전환(타이틀 ↔ 플레이 ↔ 이어하기 ↔ 결과)
   engine/
     loop.ts          고정 타임스텝(물리 60Hz) + 렌더 보간 alpha.
                      120Hz 화면에서는 두 스텝 사이를 world.interpolate() 로 섞는다
@@ -51,18 +70,26 @@ src/
     score.ts         그루터기·퍼펙트·콤보 점수          (순수)
     spawn.ts         절차적 그루터기 생성               (순수)
     camera.ts        추종                               (순수)
-    world.ts         상태 기계와 한 스텝 전진
+    world.ts         상태 기계와 한 스텝 전진. 이어하기(revive)도 여기
     session.ts       localStorage 기록
+  platform/
+    ads.ts           리워드 광고. SDK 가 없으면 개발 중엔 모의, 배포에선 '없음'
   render/            ← 월드를 읽기만 한다
     ground.ts        바닥 패턴과 비네트
     scene.ts         그루터기·모찌 그리기(원점 기준)
     sprites.ts       그루터기를 비트맵으로 구워 캐시
     world.ts         깊이 정렬해서 월드 한 장
-    hud.ts  result.ts  title.ts  share.ts  debug.ts
+    hud.ts           기록, 그루터기 수, Perfect 라벨, 착지 보정 눈금
+    offer.ts         떨어진 뒤 '광고 보고 이어하기' 화면
+    result.ts  title.ts  share.ts  debug.ts
 test/
-  score.test.ts      스코어 공식 역산
-  world.test.ts      무한 진행, 회수, 난이도, 도달 가능성, 카메라
+  score.test.ts      스코어 공식 역산, 배수 상한
+  world.test.ts      무한 진행, 회수, 난이도 두 축, 도달 가능성, 카메라
+  runtime.test.ts    차지 적분, 판정 경계, 포물선 도착 높이, 이어하기
+  fall.test.ts       실패 낙하가 그루터기 윗면을 뚫지 않는지
   feel.test.ts       판정 창이 사람 손에 맞는 크기인지
+scripts/
+  publish.sh         ref/ 와 원작 링크를 걷어내고 공개 저장소로 올린다
 ```
 
 ## 알아두면 좋은 결정들
