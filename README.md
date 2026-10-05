@@ -13,7 +13,7 @@
 ```bash
 npm install
 npm run dev      # 개발 서버
-npm test         # 테스트 44개
+npm test         # 테스트 52개
 npm run build    # 타입체크 + 번들 (gzip 약 12KB)
 npm run preview  # 빌드 결과 확인
 ```
@@ -33,8 +33,14 @@ npm run preview  # 빌드 결과 확인
 
 ### 광고
 
-리워드 광고는 `@apps-in-toss/web-framework` 의 `loadFullScreenAd` / `showFullScreenAd`
+리워드 광고는 `@apps-in-toss/web-framework`(v3)의 `loadFullScreenAd` / `showFullScreenAd`
 형태에 맞춰 `src/platform/ads.ts` 가 감싼다. **SDK 는 아직 설치하지 않았다.**
+
+**SDK 를 붙일 때는 `src/platform/toss-sdk.ts` 한 곳만 바꾼다.** 파일 안에 바꿀 두 줄이
+적혀 있다. SDK 는 토스 앱이 전역으로 주입하지 않으므로 npm 설치 후 정적 import 로
+번들에 넣어야 하고, 동적 import 나 전역 탐지로는 붙지 않는다.
+콘솔에서 받은 광고 그룹 ID 로 `config.ts` 의 `AD_GROUP_ID` 도 바꿔야 한다.
+`test/ads.test.ts` 가 문서의 호출 형태(options 중첩, 보상은 show 콜백에서만)를 고정한다.
 
 - 개발 서버이거나 `?debug=1` 이면 모의 광고(1.2초 뒤 성공)로 돈다
 - 배포 빌드에서 SDK 가 없으면 **광고 없음**으로 처리해 이어하기를 묻지 않는다.
@@ -74,6 +80,7 @@ src/
     session.ts       localStorage 기록
   platform/
     ads.ts           리워드 광고. SDK 가 없으면 개발 중엔 모의, 배포에선 '없음'
+    toss-sdk.ts      SDK 연결 지점. SDK 를 붙일 때 이 파일만 바꾼다
   render/            ← 월드를 읽기만 한다
     ground.ts        바닥 패턴과 비네트
     scene.ts         그루터기·모찌 그리기(원점 기준)
@@ -87,6 +94,7 @@ test/
   world.test.ts      무한 진행, 회수, 난이도 두 축, 도달 가능성, 카메라
   runtime.test.ts    차지 적분, 판정 경계, 포물선 도착 높이, 이어하기
   fall.test.ts       실패 낙하가 그루터기 윗면을 뚫지 않는지
+  ads.test.ts        광고 어댑터가 SDK 문서의 호출 형태를 지키는지
   feel.test.ts       판정 창이 사람 손에 맞는 크기인지
 scripts/
   publish.sh         ref/ 와 원작 링크를 걷어내고 공개 저장소로 올린다
